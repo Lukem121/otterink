@@ -98,8 +98,12 @@ export const ThemeSchema = z.object({
   font: z.enum(FONTS),
   headingFont: z.enum(FONTS),
   radius: z.number().min(0).max(40),
-  buttonStyle: z.enum(["soft", "filled", "outline", "glass"]),
+  buttonStyle: z.enum(["soft", "filled", "outline", "glass", "pop"]),
   shadow: z.boolean(),
+  /** Name, section headers and social icons. */
+  headingColor: text(32),
+  pattern: z.enum(["none", "daisies", "dots"]),
+  headerAlign: z.enum(["center", "left"]),
 });
 
 export const SiteSchema = z.object({
@@ -122,6 +126,8 @@ export const SiteSchema = z.object({
     searchPlaceholder: text(80),
     collectionsPosition: z.enum(["top", "bottom"]),
     disclosure: text(400),
+    /** Text of the button on product cards; empty hides it. */
+    buyLabel: text(30),
   }),
   theme: ThemeSchema,
   seo: z.object({

@@ -35,6 +35,7 @@ export function defaultSite(): Site {
       searchPlaceholder: "Search my favourites",
       collectionsPosition: "bottom",
       disclosure: "As an Amazon Associate I earn from qualifying purchases.",
+      buyLabel: "",
     },
     theme: presetTheme("mint"),
     seo: { title: "Otter.inkk", description: "Cozy coloring books and the art supplies I use." },
@@ -98,4 +99,36 @@ function withSeedImage(p: Product, seed: Product[]): Product {
   if (p.imageUrl) return p;
   const match = seed.find((x) => x.url === p.url && x.imageUrl);
   return match ? { ...p, imageUrl: match.imageUrl } : p;
+}
+
+/** Placeholder content from the very first version, before the real content was added. */
+export function hasDemoContent(site: Site) {
+  return (
+    site.profile.name === "Your Name" ||
+    site.products.some((p) => p.url === "https://amazon.com/") ||
+    site.links.some((l) => l.url === "https://example.com")
+  );
+}
+
+/** Swaps demo placeholders for the starter content, keeping anything the owner added. */
+export function replaceDemoContent(site: Site): Site {
+  const seed = defaultSite();
+  const products = site.products.filter((p) => p.url !== "https://amazon.com/");
+  const have = new Set(products.map((p) => p.url));
+  const demoCollections = new Set(["c-1"]);
+  return {
+    ...site,
+    profile: {
+      ...site.profile,
+      name: site.profile.name === "Your Name" ? seed.profile.name : site.profile.name,
+      tagline: site.profile.tagline === "What you do, in one line" ? seed.profile.tagline : site.profile.tagline,
+      avatarUrl: site.profile.avatarUrl || seed.profile.avatarUrl,
+    },
+    socials: site.socials.every((s) => /^https:\/\/(instagram|tiktok|youtube|pinterest)\.com\/$/.test(s.url)) ? seed.socials : site.socials,
+    links: site.links.filter((l) => l.url !== "https://example.com" && !(l.kind === "header" && l.title === "Elsewhere")),
+    products: [...seed.products.filter((p) => !have.has(p.url)), ...products.map((p) => ({ ...p, collectionIds: p.collectionIds.filter((c) => !demoCollections.has(c)) }))],
+    collections: site.collections.filter((c) => !(demoCollections.has(c.id) && c.title === "My art supplies")),
+    shop: { ...site.shop, defaultTab: "shop", searchPlaceholder: site.shop.searchPlaceholder === "Search products" ? seed.shop.searchPlaceholder : site.shop.searchPlaceholder },
+    seo: site.seo.title ? site.seo : seed.seo,
+  };
 }

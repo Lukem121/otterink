@@ -3,6 +3,27 @@ import type { FontKey, Theme } from "./types";
 type Preset = Omit<Theme, "preset" | "bgImageUrl"> & { name: string };
 
 export const PRESETS: Record<string, Preset> = {
+  daisy: {
+    name: "Daisy",
+    bgType: "solid",
+    bgFrom: "#ffffff",
+    bgTo: "#fff4f8",
+    wave: false,
+    text: "#5b3a48",
+    muted: "#a07888",
+    cardBg: "#f78aa8",
+    cardText: "#ffffff",
+    accent: "#ffffff",
+    accentText: "#ef5a83",
+    font: "nunito",
+    headingFont: "nunito",
+    radius: 18,
+    buttonStyle: "pop",
+    shadow: false,
+    headingColor: "#ef5a83",
+    pattern: "daisies",
+    headerAlign: "left",
+  },
   mint: {
     name: "Mint",
     bgType: "gradient",
@@ -20,6 +41,9 @@ export const PRESETS: Record<string, Preset> = {
     radius: 24,
     buttonStyle: "soft",
     shadow: true,
+    headingColor: "",
+    pattern: "none",
+    headerAlign: "center",
   },
   peach: {
     name: "Peach",
@@ -38,6 +62,9 @@ export const PRESETS: Record<string, Preset> = {
     radius: 22,
     buttonStyle: "soft",
     shadow: true,
+    headingColor: "",
+    pattern: "none",
+    headerAlign: "center",
   },
   lavender: {
     name: "Lavender",
@@ -56,6 +83,9 @@ export const PRESETS: Record<string, Preset> = {
     radius: 20,
     buttonStyle: "soft",
     shadow: true,
+    headingColor: "",
+    pattern: "none",
+    headerAlign: "center",
   },
   sunset: {
     name: "Sunset",
@@ -74,6 +104,9 @@ export const PRESETS: Record<string, Preset> = {
     radius: 16,
     buttonStyle: "glass",
     shadow: false,
+    headingColor: "",
+    pattern: "none",
+    headerAlign: "center",
   },
   midnight: {
     name: "Midnight",
@@ -92,6 +125,9 @@ export const PRESETS: Record<string, Preset> = {
     radius: 18,
     buttonStyle: "soft",
     shadow: false,
+    headingColor: "",
+    pattern: "none",
+    headerAlign: "center",
   },
   paper: {
     name: "Paper",
@@ -110,6 +146,9 @@ export const PRESETS: Record<string, Preset> = {
     radius: 6,
     buttonStyle: "outline",
     shadow: false,
+    headingColor: "",
+    pattern: "none",
+    headerAlign: "center",
   },
 };
 

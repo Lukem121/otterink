@@ -57,11 +57,23 @@ export function ThemeSection({ site, update }: SectionProps) {
             </div>
           )}
           {t.bgType !== "image" && <ToggleRow label="Wave shape" hint="Soft curve behind your header." checked={t.wave} onChange={(wave) => set({ wave })} />}
+          <Field label="Decorations">
+            <Segmented
+              value={t.pattern}
+              onChange={(pattern) => set({ pattern })}
+              options={[
+                { value: "none", label: "None" },
+                { value: "daisies", label: "Daisies" },
+                { value: "dots", label: "Dots" },
+              ]}
+            />
+          </Field>
         </div>
       </Card>
 
       <Card title="Colours">
         <div className="grid gap-3 sm:grid-cols-2">
+          <ColorInput label="Name & headings" value={t.headingColor || t.text} onChange={(headingColor) => set({ headingColor })} />
           <ColorInput label="Text" value={t.text} onChange={(text) => set({ text })} />
           <ColorInput label="Soft text" value={t.muted} onChange={(muted) => set({ muted })} />
           <ColorInput label="Card background" value={t.cardBg} onChange={(cardBg) => set({ cardBg })} />
@@ -69,6 +81,17 @@ export function ThemeSection({ site, update }: SectionProps) {
           <ColorInput label="Accent (badges, avatar)" value={t.accent} onChange={(accent) => set({ accent })} />
           <ColorInput label="Text on accent" value={t.accentText} onChange={(accentText) => set({ accentText })} />
         </div>
+      </Card>
+
+      <Card title="Header layout">
+        <Segmented
+          value={t.headerAlign}
+          onChange={(headerAlign) => set({ headerAlign })}
+          options={[
+            { value: "center", label: "Centered" },
+            { value: "left", label: "Photo beside name" },
+          ]}
+        />
       </Card>
 
       <Card title="Fonts">
@@ -89,6 +112,7 @@ export function ThemeSection({ site, update }: SectionProps) {
                 { value: "filled", label: "Filled" },
                 { value: "outline", label: "Outline" },
                 { value: "glass", label: "Glass" },
+                { value: "pop", label: "3D" },
               ]}
             />
           </Field>

@@ -12,6 +12,7 @@ import {
   Palette,
   Settings,
   Share2,
+  Sparkles,
   ShoppingBag,
   User,
   X,
@@ -19,6 +20,7 @@ import {
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { saveSite } from "@/app/admin/actions";
 import { SiteView } from "@/components/site/site-view";
+import { hasDemoContent, replaceDemoContent } from "@/lib/defaults";
 import type { Site } from "@/lib/types";
 import { AnalyticsSection } from "./sections-analytics";
 import { LinksSection } from "./sections-links";
@@ -188,6 +190,24 @@ export function Editor({ initial, storage }: { initial: Site; storage: Storage }
               <h1 className="text-[22px] font-semibold tracking-tight">{current.title}</h1>
               <p className="mt-0.5 text-[14px] text-zinc-500">{current.blurb}</p>
             </div>
+            {hasDemoContent(site) && (
+              <div className="mb-5 flex flex-col gap-3 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 p-4 ring-1 ring-emerald-200/70 sm:flex-row sm:items-center">
+                <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white text-emerald-600 shadow-sm">
+                  <Sparkles className="size-5" />
+                </span>
+                <div className="min-w-0 flex-1 text-[13px] text-emerald-950">
+                  <div className="font-semibold">Your page still has demo content</div>
+                  <div className="text-emerald-900/80">Swap it for your Otter.inkk name, socials and 7 Amazon products with images. Your photo stays.</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => update(replaceDemoContent)}
+                  className="shrink-0 rounded-xl bg-emerald-600 px-4 py-2 text-[13px] font-semibold text-white shadow-sm transition hover:bg-emerald-700 active:scale-[0.98]"
+                >
+                  Load my content
+                </button>
+              </div>
+            )}
             {!storage.writable && (
               <div className="mb-5 rounded-2xl bg-amber-50 p-4 text-[13px] text-amber-900 ring-1 ring-amber-200">
                 <b>Saving is off.</b> Connect a Blob store to this project in Vercel → Storage, then redeploy.

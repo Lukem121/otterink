@@ -344,6 +344,9 @@ function ShopSettingsCard({ site, update }: SectionProps) {
             />
           </Field>
         </div>
+        <Field label="Product button text" hint="Adds a button under each product, e.g. “Buy now”. Leave empty for no button.">
+          <TextInput value={shop.buyLabel} onChange={(buyLabel) => set({ buyLabel })} placeholder="Buy now" maxLength={30} />
+        </Field>
         <Field label="Search placeholder">
           <TextInput value={shop.searchPlaceholder} onChange={(searchPlaceholder) => set({ searchPlaceholder })} maxLength={80} />
         </Field>

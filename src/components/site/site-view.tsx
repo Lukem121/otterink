@@ -100,6 +100,7 @@ export function SiteView({ site, preview = false }: Props) {
     "--lp-radius": `${theme.radius}px`,
     "--lp-font": fontVar(theme.font),
     "--lp-heading": fontVar(theme.headingFont),
+    "--lp-heading-color": theme.headingColor || theme.text,
   } as CSSProperties;
 
   const background: CSSProperties =
@@ -118,6 +119,7 @@ export function SiteView({ site, preview = false }: Props) {
     >
       <div className="absolute inset-0 -z-10 overflow-hidden" style={background} aria-hidden>
         {theme.bgType === "image" && theme.bgImageUrl && <div className="absolute inset-0 bg-black/25" />}
+        {theme.pattern !== "none" && <Pattern kind={theme.pattern} color={theme.cardBg} />}
         {theme.wave && theme.bgType !== "image" && (
           <div className="absolute inset-x-0 bottom-0 top-[200px] flex flex-col opacity-75">
             <svg className="h-[160px] w-full shrink-0" viewBox="0 0 400 160" preserveAspectRatio="none">
@@ -140,37 +142,39 @@ export function SiteView({ site, preview = false }: Props) {
           </button>
         </div>
 
-        <header className="lp-enter flex flex-col items-center pt-2 text-center">
-          <Avatar url={profile.avatarUrl} name={profile.name} />
-          <h1 className="mt-4 text-[26px] font-bold leading-tight tracking-tight">{profile.name}</h1>
-          {profile.tagline && <p className="mt-1 text-[17px] opacity-90">{profile.tagline}</p>}
-          {profile.bio && (
-            <p className="mt-3 max-w-[440px] whitespace-pre-line text-[15px] leading-relaxed" style={{ color: "var(--lp-muted)" }}>
-              {profile.bio}
-            </p>
-          )}
-          {socials.length > 0 && (
-            <nav className="mt-5 flex flex-wrap justify-center gap-x-5 gap-y-3" aria-label="Social links">
-              {socials.map((s) => {
-                const { icon: Icon, label } = SOCIALS[s.platform];
-                return (
-                  <a
-                    key={s.id}
-                    href={s.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={label}
-                    title={label}
-                    onClick={onItemClick(s.id)}
-                    className="transition hover:-translate-y-0.5 hover:opacity-80"
-                  >
-                    <Icon className="size-[30px]" />
-                  </a>
-                );
-              })}
-            </nav>
-          )}
-        </header>
+        {theme.headerAlign === "left" ? (
+          <header className="lp-enter flex flex-col pt-1">
+            <div className="flex items-center gap-4">
+              <Avatar url={profile.avatarUrl} name={profile.name} size={96} />
+              <div className="min-w-0">
+                <h1 className="text-[26px] font-extrabold leading-tight tracking-tight" style={{ color: "var(--lp-heading-color)" }}>
+                  {profile.name}
+                </h1>
+                {profile.tagline && <p className="mt-0.5 text-[15px] opacity-90">{profile.tagline}</p>}
+                <SocialIcons socials={socials} onItemClick={onItemClick} className="mt-2.5 justify-start gap-x-4" />
+              </div>
+            </div>
+            {profile.bio && (
+              <p className="mt-4 whitespace-pre-line text-[15px] leading-relaxed" style={{ color: "var(--lp-muted)" }}>
+                {profile.bio}
+              </p>
+            )}
+          </header>
+        ) : (
+          <header className="lp-enter flex flex-col items-center pt-2 text-center">
+            <Avatar url={profile.avatarUrl} name={profile.name} />
+            <h1 className="mt-4 text-[26px] font-bold leading-tight tracking-tight" style={{ color: "var(--lp-heading-color)" }}>
+              {profile.name}
+            </h1>
+            {profile.tagline && <p className="mt-1 text-[17px] opacity-90">{profile.tagline}</p>}
+            {profile.bio && (
+              <p className="mt-3 max-w-[440px] whitespace-pre-line text-[15px] leading-relaxed" style={{ color: "var(--lp-muted)" }}>
+                {profile.bio}
+              </p>
+            )}
+            <SocialIcons socials={socials} onItemClick={onItemClick} className="mt-5 justify-center gap-x-5" />
+          </header>
+        )}
 
         {showTabs && (
           <div className="mt-7 flex justify-center">
@@ -213,6 +217,7 @@ export function SiteView({ site, preview = false }: Props) {
               collection={collection}
               products={products.filter((p) => p.collectionIds.includes(collection.id))}
               onBack={() => navigate("shop")}
+              buyLabel={shop.buyLabel}
               onItemClick={onItemClick}
               onToast={showToast}
             />
@@ -250,15 +255,17 @@ export function SiteView({ site, preview = false }: Props) {
 
 type ItemClick = (id: string) => (e: MouseEvent) => void;
 
-function Avatar({ url, name }: { url: string; name: string }) {
-  const [broken, setBroken] = useState<string | null>(null);
-  if (url && broken !== url) {
+function Avatar({ url, name, size = 108 }: { url: string; name: string; size?: number }) {
+  const [failed, imgRef, onImgError] = useImageFailed(url);
+  if (url && !failed) {
     return (
       <img
         src={url}
         alt={name}
-        onError={() => setBroken(url)}
-        className="size-[108px] rounded-full object-cover shadow-[0_8px_30px_-6px_rgb(0_0_0/0.35)] ring-4 ring-white/70"
+        ref={imgRef}
+        onError={onImgError}
+        style={{ width: size, height: size }}
+        className="shrink-0 rounded-full object-cover shadow-[0_8px_30px_-6px_rgb(0_0_0/0.35)] ring-4 ring-white/70"
         width={104}
         height={104}
       />
@@ -272,8 +279,8 @@ function Avatar({ url, name }: { url: string; name: string }) {
     .toUpperCase();
   return (
     <div
-      className="lp-heading grid size-[108px] place-items-center rounded-full text-3xl font-bold shadow-[0_8px_30px_-6px_rgb(0_0_0/0.35)] ring-4 ring-white/70"
-      style={{ background: "var(--lp-accent)", color: "var(--lp-accent-text)" }}
+      className="lp-heading grid shrink-0 place-items-center rounded-full text-3xl font-bold shadow-[0_8px_30px_-6px_rgb(0_0_0/0.35)] ring-4 ring-white/70"
+      style={{ width: size, height: size, background: "var(--lp-card)", color: "var(--lp-card-text)" }}
     >
       {initials || "?"}
     </div>
@@ -286,7 +293,7 @@ function LinksList({ links, onItemClick, onToast }: { links: LinkItem[]; onItemC
       {links.map((l) => {
         if (l.kind === "header") {
           return (
-            <h2 key={l.id} className="mt-3 text-center text-[17px] font-bold">
+            <h2 key={l.id} className="mt-3 text-center text-[19px] font-extrabold" style={{ color: "var(--lp-heading-color)" }}>
               {l.title}
             </h2>
           );
@@ -397,7 +404,7 @@ function ShopView({
       )}
       {site.shop.collectionsPosition === "top" && collectionCards}
       {results.length > 0 ? (
-        <ProductGrid products={results} onItemClick={onItemClick} onToast={onToast} />
+        <ProductGrid products={results} onItemClick={onItemClick} onToast={onToast} buyLabel={site.shop.buyLabel} />
       ) : q ? (
         <p className="py-10 text-center opacity-70">No products match “{query}”.</p>
       ) : null}
@@ -406,7 +413,17 @@ function ShopView({
   );
 }
 
-function ProductGrid({ products, onItemClick, onToast }: { products: Product[]; onItemClick: ItemClick; onToast: (m: string) => void }) {
+function ProductGrid({
+  products,
+  onItemClick,
+  onToast,
+  buyLabel,
+}: {
+  products: Product[];
+  onItemClick: ItemClick;
+  onToast: (m: string) => void;
+  buyLabel: string;
+}) {
   return (
     <div className="grid grid-cols-2 gap-3.5">
       {products.map((p) => (
@@ -424,11 +441,23 @@ function ProductGrid({ products, onItemClick, onToast }: { products: Product[]; 
               )}
             </div>
             <div className="py-2.5 pl-3 pr-8">
-              <div className="truncate text-[15px] font-semibold leading-snug">{p.title}</div>
-              {p.price && <div className="mt-0.5 text-[13px] opacity-70">{p.price}</div>}
+              <div className="line-clamp-2 text-[15px] font-bold leading-snug">{p.title}</div>
+              {p.price && <div className="mt-0.5 text-[13px] opacity-80">{p.price}</div>}
             </div>
           </a>
-          <div className="absolute bottom-2 right-1">
+          {buyLabel && (
+            <a
+              href={p.url}
+              target="_blank"
+              rel="noopener noreferrer sponsored"
+              onClick={onItemClick(p.id)}
+              className="mx-3 mb-3 mt-auto block rounded-full py-2 text-center text-[14px] font-semibold transition hover:opacity-90"
+              style={{ background: "var(--lp-card-text)", color: "var(--lp-card)" }}
+            >
+              {buyLabel}
+            </a>
+          )}
+          <div className={`absolute right-1 ${buyLabel ? "bottom-[56px]" : "bottom-2"}`}>
             <ItemMenu title={p.title} url={p.url} onToast={onToast} />
           </div>
         </div>
@@ -465,7 +494,9 @@ function CollectionView({
   onBack,
   onItemClick,
   onToast,
+  buyLabel,
 }: {
+  buyLabel: string;
   collection: Collection;
   products: Product[];
   onBack: () => void;
@@ -489,7 +520,7 @@ function CollectionView({
           {collection.description && <p className="text-[14px]" style={{ color: "var(--lp-muted)" }}>{collection.description}</p>}
         </div>
       </div>
-      <ProductGrid products={products} onItemClick={onItemClick} onToast={onToast} />
+      <ProductGrid products={products} onItemClick={onItemClick} onToast={onToast} buyLabel={buyLabel} />
     </div>
   );
 }
@@ -544,10 +575,94 @@ function ItemMenu({ title, url, onToast }: { title: string; url: string; onToast
   );
 }
 
+/**
+ * Tracks whether an <img> failed. The callback ref also catches images that failed
+ * before hydration, which never fire React's onError.
+ */
+function useImageFailed(src: string) {
+  const [failed, setFailed] = useState<string | null>(null);
+  const markFailed = useCallback(() => setFailed(src), [src]);
+  const ref = useCallback(
+    (img: HTMLImageElement | null) => {
+      if (img && img.complete && img.naturalWidth === 0) setFailed(src);
+    },
+    [src],
+  );
+  return [!!src && failed === src, ref, markFailed] as const;
+}
+
+function SocialIcons({ socials, onItemClick, className }: { socials: Site["socials"]; onItemClick: ItemClick; className: string }) {
+  if (socials.length === 0) return null;
+  return (
+    <nav className={`flex flex-wrap gap-y-3 ${className}`} aria-label="Social links" style={{ color: "var(--lp-heading-color)" }}>
+      {socials.map((s) => {
+        const { icon: Icon, label } = SOCIALS[s.platform];
+        return (
+          <a
+            key={s.id}
+            href={s.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={label}
+            title={label}
+            onClick={onItemClick(s.id)}
+            className="transition hover:-translate-y-0.5 hover:opacity-80"
+          >
+            <Icon className="size-[28px]" />
+          </a>
+        );
+      })}
+    </nav>
+  );
+}
+
+/** Decorative background shapes, tinted from the card colour. */
+function Pattern({ kind, color }: { kind: "daisies" | "dots"; color: string }) {
+  const petal = `color-mix(in srgb, ${color} 55%, white)`;
+  // Fixed positions so server and client render the same; repeated down the page.
+  const spots = [
+    { x: "84%", y: -30, s: 120, r: 10 },
+    { x: "-8%", y: 240, s: 110, r: -15 },
+    { x: "-8%", y: 520, s: 130, r: 30 },
+    { x: "90%", y: 760, s: 120, r: 5 },
+    { x: "-5%", y: 1080, s: 110, r: -20 },
+    { x: "89%", y: 1300, s: 125, r: 25 },
+    { x: "-7%", y: 1650, s: 120, r: 0 },
+    { x: "90%", y: 1900, s: 110, r: -10 },
+    { x: "-6%", y: 2250, s: 125, r: 15 },
+    { x: "89%", y: 2500, s: 115, r: -25 },
+    { x: "-7%", y: 2850, s: 120, r: 5 },
+    { x: "90%", y: 3100, s: 120, r: 20 },
+  ];
+  return (
+    <>
+      {spots.map((p, i) => (
+        <svg
+          key={i}
+          viewBox="-50 -50 100 100"
+          className="absolute"
+          style={{ left: p.x, top: p.y, width: kind === "dots" ? p.s * 0.45 : p.s, transform: `rotate(${p.r}deg)` }}
+        >
+          {kind === "daisies" ? (
+            <>
+              {[0, 60, 120, 180, 240, 300].map((a) => (
+                <ellipse key={a} cx="0" cy="-24" rx="17" ry="24" fill={petal} transform={`rotate(${a})`} />
+              ))}
+              <circle r="14" fill="#ffe27a" />
+            </>
+          ) : (
+            <circle r="48" fill={petal} />
+          )}
+        </svg>
+      ))}
+    </>
+  );
+}
+
 function ImageOrPlaceholder({ src, label, kind = "product" }: { src: string; label: string; kind?: "product" | "link" }) {
-  const [broken, setBroken] = useState<string | null>(null);
-  if (src && broken !== src) {
-    return <img src={src} alt={label} loading="lazy" onError={() => setBroken(src)} className="size-full object-cover" />;
+  const [failed, imgRef, onImgError] = useImageFailed(src);
+  if (src && !failed) {
+    return <img ref={imgRef} src={src} alt={label} loading="lazy" onError={onImgError} className="size-full object-cover" />;
   }
   const hue = [...label].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7);
   const Icon = kind === "link" ? Sparkles : ShoppingBag;

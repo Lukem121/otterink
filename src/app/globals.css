@@ -53,6 +53,19 @@ a.lp-card:hover,
 button.lp-card:hover {
   transform: translateY(-2px);
 }
+/* "Pop": solid card with a chunky darker edge underneath */
+.lp-btn-pop .lp-card {
+  box-shadow: 0 6px 0 color-mix(in srgb, var(--lp-card) 72%, #5a1a30);
+  margin-bottom: 6px;
+}
+.lp-btn-pop a.lp-card:hover,
+.lp-btn-pop button.lp-card:hover {
+  transform: translateY(2px);
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--lp-card) 72%, #5a1a30);
+}
+.lp-btn-pop .lp-card input::placeholder {
+  color: var(--lp-card-text);
+}
 .lp-shadow a.lp-card:hover,
 .lp-shadow button.lp-card:hover {
   box-shadow:
