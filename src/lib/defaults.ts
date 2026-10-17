@@ -1,119 +1,74 @@
 import { presetTheme } from "./themes";
-import type { Site } from "./types";
+import type { Collection, LinkItem, Product, Site } from "./types";
 
+/** Starting content, migrated from beacons.ai/otter.inkk. Used until the first save in the admin. */
 export function defaultSite(): Site {
   return {
     profile: {
-      name: "Your Name",
-      tagline: "What you do, in one line",
+      name: "Otter.inkk",
+      tagline: "Cozy coloring & the supplies I use",
       bio: "",
-      avatarUrl: "",
+      avatarUrl:
+        "https://cdn.beacons.ai/user_content/C6u20nD9q4NEGd0A6qpORMs7G3r1/profile_otter.inkk.png?q=1792041417.766935",
     },
     socials: [
-      { id: "s-ig", platform: "instagram", url: "https://instagram.com/", enabled: true },
-      { id: "s-tt", platform: "tiktok", url: "https://tiktok.com/", enabled: true },
-      { id: "s-yt", platform: "youtube", url: "https://youtube.com/", enabled: true },
-      { id: "s-pin", platform: "pinterest", url: "https://pinterest.com/", enabled: true },
+      { id: "s-ig", platform: "instagram", url: "https://instagram.com/otter.inkk", enabled: true },
+      { id: "s-tt", platform: "tiktok", url: "https://tiktok.com/@otter.ink", enabled: true },
     ],
-    links: [
-      {
-        id: "l-1",
-        kind: "featured",
-        title: "My latest project",
-        subtitle: "Featured cards show a big image. Edit me in the admin.",
-        url: "https://example.com",
-        imageUrl: "",
-        enabled: true,
-        highlight: false,
-      },
-      {
-        id: "l-2",
-        kind: "link",
-        title: "My website",
-        subtitle: "",
-        url: "https://example.com",
-        imageUrl: "",
-        enabled: true,
-        highlight: true,
-      },
-      { id: "l-3", kind: "header", title: "Elsewhere", subtitle: "", url: "", imageUrl: "", enabled: true, highlight: false },
-      {
-        id: "l-4",
-        kind: "link",
-        title: "Newsletter",
-        subtitle: "",
-        url: "https://example.com",
-        imageUrl: "",
-        enabled: true,
-        highlight: false,
-      },
-    ],
+    links: [],
     products: [
-      {
-        id: "p-1",
-        title: "Favourite marker set",
-        url: "https://amazon.com/",
-        imageUrl: "",
-        price: "$24.99",
-        badge: "Fave",
-        description: "",
-        enabled: true,
-        showInGrid: true,
-        collectionIds: ["c-1"],
-      },
-      {
-        id: "p-2",
-        title: "Desk lamp I use daily",
-        url: "https://amazon.com/",
-        imageUrl: "",
-        price: "$39.00",
-        badge: "",
-        description: "",
-        enabled: true,
-        showInGrid: true,
-        collectionIds: ["c-1"],
-      },
-      {
-        id: "p-3",
-        title: "Sketchbook",
-        url: "https://amazon.com/",
-        imageUrl: "",
-        price: "$12.00",
-        badge: "",
-        description: "",
-        enabled: true,
-        showInGrid: true,
-        collectionIds: ["c-1"],
-      },
-      {
-        id: "p-4",
-        title: "Cosy blanket",
-        url: "https://amazon.com/",
-        imageUrl: "",
-        price: "$29.99",
-        badge: "",
-        description: "",
-        enabled: true,
-        showInGrid: true,
-        collectionIds: [],
-      },
+      product("p-1", "Alcohol Markers", "https://link.amazon/B0efZER2R"),
+      product("p-2", "Cozy Vibes", "https://link.amazon/B0jm2AVER"),
+      product("p-3", "Girl Moments", "https://link.amazon/B0fxRqfmU"),
+      product("p-4", "Spooky Cutie", "https://link.amazon/B04s9u0er"),
+      product("p-5", "Cozy Season", "https://link.amazon/B04YpSyJi"),
+      product("p-6", "Cozy Capybara", "https://link.amazon/B0gtAzcv1"),
+      product("p-7", "Cozy Corner", "https://link.amazon/B00UNORrh"),
     ],
-    collections: [{ id: "c-1", title: "My art supplies", description: "", enabled: true }],
+    collections: [],
     shop: {
       enabled: true,
       linksLabel: "Links",
       shopLabel: "Shop",
-      defaultTab: "links",
+      defaultTab: "shop",
       showSearch: true,
-      searchPlaceholder: "Search products",
+      searchPlaceholder: "Search my favourites",
       collectionsPosition: "bottom",
       disclosure: "As an Amazon Associate I earn from qualifying purchases.",
     },
     theme: presetTheme("mint"),
-    seo: { title: "", description: "" },
+    seo: { title: "Otter.inkk", description: "Cozy coloring books and the art supplies I use." },
     updatedAt: new Date(0).toISOString(),
   };
 }
+
+function product(id: string, title: string, url: string): Product {
+  return {
+    id,
+    title,
+    url,
+    imageUrl: "",
+    price: "",
+    badge: "",
+    description: "",
+    enabled: true,
+    showInGrid: true,
+    collectionIds: [],
+  };
+}
+
+const BLANK_LINK: LinkItem = {
+  id: "",
+  kind: "link",
+  title: "",
+  subtitle: "",
+  url: "",
+  imageUrl: "",
+  enabled: true,
+  highlight: false,
+};
+const BLANK_PRODUCT = product("", "", "");
+const BLANK_COLLECTION: Collection = { id: "", title: "", description: "", enabled: true };
 
 /** Fill any fields missing from older saved data with defaults. */
 export function normalizeSite(raw: unknown): Site {
@@ -127,8 +82,8 @@ export function normalizeSite(raw: unknown): Site {
     theme: { ...d.theme, ...s.theme },
     seo: { ...d.seo, ...s.seo },
     socials: s.socials ?? d.socials,
-    links: (s.links ?? d.links).map((l) => ({ ...d.links[1], ...l })),
-    products: (s.products ?? d.products).map((p) => ({ ...d.products[3], ...p })),
-    collections: (s.collections ?? d.collections).map((c) => ({ ...d.collections[0], ...c })),
+    links: (s.links ?? d.links).map((l) => ({ ...BLANK_LINK, ...l })),
+    products: (s.products ?? d.products).map((p) => ({ ...BLANK_PRODUCT, ...p })),
+    collections: (s.collections ?? d.collections).map((c) => ({ ...BLANK_COLLECTION, ...c })),
   };
 }

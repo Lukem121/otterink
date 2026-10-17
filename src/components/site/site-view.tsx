@@ -30,7 +30,9 @@ export function SiteView({ site, preview = false }: Props) {
   const [openCollection, setOpenCollection] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [toast, setToast] = useState<string | null>(null);
-  const activeTab: Tab = shopOn ? tab : "links";
+  // Only show the Links/Shop toggle when both tabs have something in them.
+  const showTabs = shopOn && links.length > 0;
+  const activeTab: Tab = !shopOn ? "links" : links.length === 0 ? "shop" : tab;
 
   // Deep links: #shop, #links, #shop/<collection-id>
   useEffect(() => {
@@ -170,7 +172,7 @@ export function SiteView({ site, preview = false }: Props) {
           )}
         </header>
 
-        {shopOn && (
+        {showTabs && (
           <div className="mt-7 flex justify-center">
             <div
               role="tablist"
