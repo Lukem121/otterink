@@ -1,11 +1,10 @@
 "use client";
-/* eslint-disable @next/next/no-img-element -- admin thumbnails */
 
 import { ChevronDown, Heading, ImageIcon, Link2, Plus, Sparkles } from "lucide-react";
 import { useState } from "react";
 import type { LinkItem, Site } from "@/lib/types";
 import type { SectionProps } from "./sections-profile";
-import { Button, Card, DeleteButton, EmptyState, Field, ImageInput, SortableList, TextInput, Toggle, ToggleRow, uid } from "./ui";
+import { Button, Card, DeleteButton, EmptyState, Field, ImageInput, SortableList, TextInput, Thumb, Toggle, ToggleRow, rowCls, uid } from "./ui";
 
 const KIND = {
   link: { label: "Link", icon: Link2 },
@@ -34,8 +33,8 @@ export function LinksSection({ site, update }: SectionProps) {
 
   return (
     <Card
-      title="Links"
-      description="Shown on the Links tab. Drag to reorder, click a row to edit."
+      title="Your links"
+      description="Drag to reorder. Click a row to edit."
       actions={
         <>
           <Button onClick={() => add("header")} title="Add section header">
@@ -53,7 +52,7 @@ export function LinksSection({ site, update }: SectionProps) {
       }
     >
       {site.links.length === 0 ? (
-        <EmptyState>No links yet. Click “Link” to add your first one.</EmptyState>
+        <EmptyState icon={<Link2 className="size-5" />}>No links yet. Click “Link” to add your first one.</EmptyState>
       ) : (
         <SortableList
           items={site.links}
@@ -63,16 +62,10 @@ export function LinksSection({ site, update }: SectionProps) {
             const Icon = KIND[item.kind].icon;
             const isOpen = open === item.id;
             return (
-              <div className={`rounded-xl bg-zinc-50 ring-1 ring-zinc-200/70 ${item.enabled ? "" : "opacity-60"}`}>
+              <div className={`${rowCls} ${item.enabled ? "" : "opacity-60"}`}>
                 <div className="flex items-center gap-2 p-2">
                   {handle}
-                  {item.imageUrl ? (
-                    <img src={item.imageUrl} alt="" className="size-9 shrink-0 rounded-lg object-cover" />
-                  ) : (
-                    <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-white text-zinc-500 ring-1 ring-zinc-200">
-                      <Icon className="size-4" />
-                    </span>
-                  )}
+                  <Thumb src={item.imageUrl} fallback={<Icon className="size-4" />} />
                   <button type="button" onClick={() => setOpen(isOpen ? null : item.id)} className="min-w-0 flex-1 text-left">
                     <div className="flex items-center gap-1.5 truncate text-[14px] font-medium text-zinc-900">
                       {item.title || <span className="text-zinc-400">Untitled</span>}
@@ -93,7 +86,7 @@ export function LinksSection({ site, update }: SectionProps) {
                   </button>
                 </div>
                 {isOpen && (
-                  <div className="space-y-4 border-t border-zinc-200/70 p-4">
+                  <div className="space-y-4 border-t border-black/[0.06] p-4 sm:p-5">
                     <Field label={item.kind === "header" ? "Header text" : "Title"}>
                       <TextInput value={item.title} onChange={(title) => patch({ title })} maxLength={200} autoFocus />
                     </Field>

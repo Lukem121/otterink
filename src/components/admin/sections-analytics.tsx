@@ -34,8 +34,7 @@ export function AnalyticsSection({ site, enabled }: { site: Site; enabled: boole
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <h2 className="text-[15px] font-semibold text-zinc-900">Analytics</h2>
+      <div className="flex items-center justify-end">
         <div className="inline-flex gap-1 rounded-xl bg-white p-1 ring-1 ring-zinc-200">
           {RANGES.map((r) => (
             <button
@@ -109,7 +108,7 @@ export function AnalyticsSection({ site, enabled }: { site: Site; enabled: boole
 
 function Stat({ icon: Icon, label, value }: { icon: typeof Eye; label: string; value: number | string }) {
   return (
-    <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-zinc-200/70">
+    <div className="rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgb(0_0_0/0.04)] ring-1 ring-black/[0.06]">
       <div className="flex items-center gap-1.5 text-[12px] font-medium text-zinc-500">
         <Icon className="size-3.5" /> {label}
       </div>

@@ -1,12 +1,11 @@
 "use client";
-/* eslint-disable @next/next/no-img-element -- admin thumbnails */
 
-import { AlertTriangle, ChevronDown, Loader2, Package, Plus, Search, Wand2 } from "lucide-react";
+import { AlertTriangle, ChevronDown, FolderHeart, Loader2, Package, Plus, Search, Wand2 } from "lucide-react";
 import { useState } from "react";
 import { fetchPreview } from "@/app/admin/actions";
 import type { Collection, Product, Site } from "@/lib/types";
 import type { SectionProps } from "./sections-profile";
-import { Button, Card, DeleteButton, EmptyState, Field, ImageInput, Select, SortableList, TextArea, TextInput, Toggle, ToggleRow, uid } from "./ui";
+import { Button, Card, DeleteButton, EmptyState, Field, ImageInput, Select, SortableList, TextArea, TextInput, Thumb, Toggle, ToggleRow, rowCls, uid } from "./ui";
 
 export function ShopSection({ site, update }: SectionProps) {
   return (
@@ -16,6 +15,19 @@ export function ShopSection({ site, update }: SectionProps) {
       <ShopSettingsCard site={site} update={update} />
     </div>
   );
+}
+
+/** Short store name shown on a product row. */
+function store(url: string) {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, "");
+    if (/(^|\.)amazon\.|^amzn\.|^link\.amazon$|^a\.co$/.test(host)) return "Amazon";
+    if (/liketoknow|shopltk|ltk\./.test(host)) return "LTK";
+    if (/etsy\./.test(host)) return "Etsy";
+    return host.split(".").slice(-2, -1)[0]?.replace(/^./, (c) => c.toUpperCase()) ?? "";
+  } catch {
+    return "";
+  }
 }
 
 function amazonWarning(url: string) {
@@ -57,7 +69,7 @@ function ProductsCard({ site, update }: SectionProps) {
   return (
     <Card
       title="Products"
-      description="Shown on the Shop tab. Paste a product link and click “Fetch details” to fill it in."
+      description="Drag to reorder. Click a product to edit it."
       actions={
         <Button variant="primary" onClick={add}>
           <Plus className="size-4" /> Product
@@ -65,13 +77,13 @@ function ProductsCard({ site, update }: SectionProps) {
       }
     >
       {site.products.length > 6 && (
-        <label className="mb-3 flex items-center gap-2 rounded-xl border border-zinc-200 px-3 py-2">
+        <label className="mb-3 flex items-center gap-2 rounded-xl border border-zinc-200 bg-zinc-50/60 px-3 py-2 focus-within:border-emerald-500 focus-within:bg-white">
           <Search className="size-4 text-zinc-400" />
           <input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Find a product" className="w-full bg-transparent text-[14px] outline-none" />
         </label>
       )}
       {site.products.length === 0 ? (
-        <EmptyState>No products yet. Click “Product” to add one.</EmptyState>
+        <EmptyState icon={<Package className="size-5" />}>No products yet. Click “Product” to add one.</EmptyState>
       ) : (
         <SortableList
           items={visible}
@@ -136,25 +148,23 @@ function ProductRow({
   }
 
   return (
-    <div className={`rounded-xl bg-zinc-50 ring-1 ring-zinc-200/70 ${item.enabled ? "" : "opacity-60"}`}>
+    <div className={`${rowCls} ${item.enabled ? "" : "opacity-60"}`}>
       <div className="flex items-center gap-2 p-2">
         {handle}
-        {item.imageUrl ? (
-          <img src={item.imageUrl} alt="" className="size-10 shrink-0 rounded-lg object-cover" />
-        ) : (
-          <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-white text-zinc-400 ring-1 ring-zinc-200">
-            <Package className="size-4" />
-          </span>
-        )}
+        <Thumb src={item.imageUrl} fallback={<Package className="size-4" />} />
         <button type="button" onClick={onToggleOpen} className="min-w-0 flex-1 text-left">
           <div className="flex items-center gap-1.5 truncate text-[14px] font-medium text-zinc-900">
             {item.title || <span className="text-zinc-400">Untitled product</span>}
             {warning && <AlertTriangle className="size-3.5 shrink-0 text-amber-500" />}
           </div>
-          <div className="truncate text-[12px] text-zinc-500">
-            {[item.price, item.collectionIds.length ? `${item.collectionIds.length} collection${item.collectionIds.length > 1 ? "s" : ""}` : "", !item.showInGrid ? "hidden from grid" : ""]
-              .filter(Boolean)
-              .join(" · ") || item.url || "No link yet"}
+          <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[12px] text-zinc-500">
+            {store(item.url) && <span className="shrink-0 rounded-md bg-zinc-100 px-1.5 py-0.5 text-[11px] font-medium text-zinc-600">{store(item.url)}</span>}
+            {item.badge && <span className="shrink-0 rounded-md bg-emerald-50 px-1.5 py-0.5 text-[11px] font-medium text-emerald-700">{item.badge}</span>}
+            <span className="truncate">
+              {[item.price, item.collectionIds.length ? `${item.collectionIds.length} collection${item.collectionIds.length > 1 ? "s" : ""}` : "", !item.showInGrid ? "hidden from grid" : ""]
+                .filter(Boolean)
+                .join(" · ") || (item.url ? "" : "No link yet")}
+            </span>
           </div>
         </button>
         <Toggle checked={item.enabled} onChange={(enabled) => onChange({ enabled })} label="Visible" />
@@ -163,7 +173,7 @@ function ProductRow({
         </button>
       </div>
       {open && (
-        <div className="space-y-4 border-t border-zinc-200/70 p-4">
+        <div className="space-y-4 border-t border-black/[0.06] p-4 sm:p-5">
           <Field
             label="Product link"
             hint={warning ? <span className="text-amber-600">{warning}</span> : "Your affiliate link (Amazon, LTK, shop page…)."}
@@ -182,7 +192,7 @@ function ProductRow({
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Price">
-              <TextInput value={item.price} onChange={(price) => onChange({ price })} placeholder="$19.99" maxLength={40} />
+              <TextInput value={item.price} onChange={(price) => onChange({ price })} placeholder={store(item.url) === "Amazon" ? "Leave blank for Amazon" : "$19.99"} maxLength={40} />
             </Field>
             <Field label="Badge">
               <TextInput value={item.badge} onChange={(badge) => onChange({ badge })} placeholder="New, Fave, Sale…" maxLength={40} />
@@ -238,7 +248,7 @@ function CollectionsCard({ site, update }: SectionProps) {
   return (
     <Card
       title="Collections"
-      description="Group products, e.g. “Art supplies”. Each shows as a photo collage card. Add products to a collection from the product's settings."
+      description="Each shows as a photo collage card. Add products to one from the product's settings."
       actions={
         <Button
           variant="primary"
@@ -253,7 +263,7 @@ function CollectionsCard({ site, update }: SectionProps) {
       }
     >
       {site.collections.length === 0 ? (
-        <EmptyState>No collections yet.</EmptyState>
+        <EmptyState icon={<FolderHeart className="size-5" />}>No collections yet. Group products like “Markers I use”.</EmptyState>
       ) : (
         <SortableList
           items={site.collections}
@@ -263,7 +273,7 @@ function CollectionsCard({ site, update }: SectionProps) {
             const isOpen = open === item.id;
             const n = count(item.id);
             return (
-              <div className={`rounded-xl bg-zinc-50 ring-1 ring-zinc-200/70 ${item.enabled ? "" : "opacity-60"}`}>
+              <div className={`${rowCls} ${item.enabled ? "" : "opacity-60"}`}>
                 <div className="flex items-center gap-2 p-2">
                   {handle}
                   <button type="button" onClick={() => setOpen(isOpen ? null : item.id)} className="min-w-0 flex-1 text-left">
@@ -279,7 +289,7 @@ function CollectionsCard({ site, update }: SectionProps) {
                   </button>
                 </div>
                 {isOpen && (
-                  <div className="space-y-4 border-t border-zinc-200/70 p-4">
+                  <div className="space-y-4 border-t border-black/[0.06] p-4 sm:p-5">
                     <Field label="Name">
                       <TextInput value={item.title} onChange={(title) => patch({ title })} maxLength={120} autoFocus />
                     </Field>

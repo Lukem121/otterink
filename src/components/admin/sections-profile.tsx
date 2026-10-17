@@ -1,9 +1,9 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { AtSign, Plus } from "lucide-react";
 import { SOCIALS } from "@/components/site/social-icons";
 import { SOCIAL_PLATFORMS, type Site, type SocialPlatform } from "@/lib/types";
-import { Button, Card, DeleteButton, EmptyState, Field, ImageInput, Select, SortableList, TextArea, TextInput, Toggle, uid } from "./ui";
+import { Button, Card, DeleteButton, EmptyState, Field, ImageInput, Select, SortableList, TextArea, TextInput, Toggle, rowCls, uid } from "./ui";
 
 export type SectionProps = { site: Site; update: (fn: (s: Site) => Site) => void };
 
@@ -12,7 +12,7 @@ export function ProfileSection({ site, update }: SectionProps) {
   const set = (patch: Partial<Site["profile"]>) => update((s) => ({ ...s, profile: { ...s.profile, ...patch } }));
   return (
     <div className="space-y-5">
-      <Card title="Profile" description="The top of your page.">
+      <Card>
         <div className="space-y-4">
           <Field label="Profile picture">
             <ImageInput value={p.avatarUrl} onChange={(avatarUrl) => set({ avatarUrl })} shape="circle" maxSize={600} />
@@ -39,8 +39,8 @@ export function SocialsSection({ site, update }: SectionProps) {
 
   return (
     <Card
-      title="Social icons"
-      description="Icons under your name. Drag to reorder."
+      title="Your accounts"
+      description="Drag to reorder. Switch off to hide one without deleting it."
       actions={
         <Button
           variant="primary"
@@ -51,7 +51,7 @@ export function SocialsSection({ site, update }: SectionProps) {
       }
     >
       {site.socials.length === 0 ? (
-        <EmptyState>No social icons yet. Click Add.</EmptyState>
+        <EmptyState icon={<AtSign className="size-5" />}>No social icons yet. Click Add.</EmptyState>
       ) : (
         <SortableList
           items={site.socials}
@@ -60,7 +60,7 @@ export function SocialsSection({ site, update }: SectionProps) {
             const Icon = SOCIALS[item.platform].icon;
             const patch = (p: Partial<typeof item>) => setSocials(site.socials.map((s) => (s.id === item.id ? { ...s, ...p } : s)));
             return (
-              <div className="flex flex-wrap items-center gap-2 rounded-xl bg-zinc-50 p-2 ring-1 ring-zinc-200/70 sm:flex-nowrap">
+              <div className={`flex flex-wrap items-center gap-2 p-2 sm:flex-nowrap ${rowCls}`}>
                 {handle}
                 <Icon className="size-5 shrink-0 text-zinc-700" />
                 <div className="w-36 shrink-0">

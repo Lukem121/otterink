@@ -4,17 +4,17 @@
 import { DndContext, KeyboardSensor, PointerSensor, TouchSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, ImagePlus, Loader2, Trash2, X } from "lucide-react";
+import { ChevronDown, GripVertical, ImageOff, ImagePlus, Loader2, Trash2, X } from "lucide-react";
 import { useId, useRef, useState, type ReactNode } from "react";
 import { uploadImage } from "@/app/admin/actions";
 
 export function Card({ title, description, actions, children }: { title?: string; description?: string; actions?: ReactNode; children: ReactNode }) {
   return (
-    <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-zinc-200/70">
+    <section className="rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgb(0_0_0/0.04)] ring-1 ring-black/[0.06] sm:p-6">
       {(title || actions) && (
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
-            {title && <h2 className="text-[15px] font-semibold text-zinc-900">{title}</h2>}
+            {title && <h2 className="text-[15px] font-semibold tracking-tight text-zinc-900">{title}</h2>}
             {description && <p className="mt-0.5 text-[13px] text-zinc-500">{description}</p>}
           </div>
           {actions && <div className="flex shrink-0 gap-2">{actions}</div>}
@@ -36,7 +36,7 @@ export function Field({ label, hint, children }: { label: string; hint?: ReactNo
 }
 
 const inputCls =
-  "w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-[14px] text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-4 focus:ring-zinc-100";
+  "w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-[14px] text-zinc-900 shadow-[0_1px_1px_rgb(0_0_0/0.02)] outline-none transition placeholder:text-zinc-400 hover:border-zinc-300 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/15";
 
 export function TextInput(props: Omit<React.InputHTMLAttributes<HTMLInputElement>, "onChange" | "value"> & { value: string; onChange: (v: string) => void }) {
   const { onChange, className, ...rest } = props;
@@ -50,13 +50,16 @@ export function TextArea(props: Omit<React.TextareaHTMLAttributes<HTMLTextAreaEl
 
 export function Select<T extends string>({ value, onChange, options }: { value: T; onChange: (v: T) => void; options: { value: T; label: string }[] }) {
   return (
-    <select className={inputCls} value={value} onChange={(e) => onChange(e.target.value as T)}>
-      {options.map((o) => (
-        <option key={o.value} value={o.value}>
-          {o.label}
-        </option>
-      ))}
-    </select>
+    <div className="relative">
+      <select className={`${inputCls} cursor-pointer appearance-none pr-9`} value={value} onChange={(e) => onChange(e.target.value as T)}>
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-zinc-400" />
+    </div>
   );
 }
 
@@ -94,8 +97,8 @@ export function Button({
   ...rest
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "secondary" | "ghost" | "danger" }) {
   const v = {
-    primary: "bg-zinc-900 text-white hover:bg-zinc-700 disabled:bg-zinc-400",
-    secondary: "bg-white text-zinc-800 ring-1 ring-zinc-200 hover:bg-zinc-50",
+    primary: "bg-zinc-900 text-white shadow-sm hover:bg-zinc-700 disabled:bg-zinc-400",
+    secondary: "bg-white text-zinc-800 shadow-[0_1px_1px_rgb(0_0_0/0.03)] ring-1 ring-black/10 hover:bg-zinc-50",
     ghost: "text-zinc-600 hover:bg-zinc-100",
     danger: "text-red-600 hover:bg-red-50",
   }[variant];
@@ -103,7 +106,7 @@ export function Button({
     <button
       type="button"
       {...rest}
-      className={`inline-flex items-center justify-center gap-1.5 rounded-xl px-3.5 py-2 text-[13px] font-semibold transition disabled:cursor-not-allowed ${v} ${className ?? ""}`}
+      className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-3.5 py-2 text-[13px] font-semibold transition active:scale-[0.98] disabled:cursor-not-allowed ${v} ${className ?? ""}`}
     >
       {children}
     </button>
@@ -164,6 +167,7 @@ export function ImageInput({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [drag, setDrag] = useState(false);
+  const [brokenSrc, setBrokenSrc] = useState<string | null>(null);
 
   async function handle(file: File | undefined) {
     if (!file) return;
@@ -202,7 +206,18 @@ export function ImageInput({
         className={`group relative grid shrink-0 place-items-center overflow-hidden border-2 border-dashed bg-zinc-50 text-zinc-400 transition hover:border-zinc-400 hover:text-zinc-600 ${box} ${drag ? "border-emerald-500 bg-emerald-50" : "border-zinc-200"} ${value ? "border-solid" : ""}`}
         aria-label="Upload image"
       >
-        {value ? <img src={value} alt="" className="absolute inset-0 size-full object-cover" /> : <ImagePlus className="size-6" />}
+        {value && brokenSrc !== value ? (
+          <img
+            src={value}
+            alt=""
+            onError={() => setBrokenSrc(value)}
+            className={`absolute inset-0 size-full bg-white ${shape === "circle" ? "object-cover" : "object-contain p-1"}`}
+          />
+        ) : value ? (
+          <ImageOff className="size-5" />
+        ) : (
+          <ImagePlus className="size-6" />
+        )}
         {busy && (
           <span className="absolute inset-0 grid place-items-center bg-white/70">
             <Loader2 className="size-5 animate-spin text-zinc-700" />
@@ -271,7 +286,7 @@ function SortableItem({ id, children }: { id: string; children: (handle: ReactNo
       ref={setActivatorNodeRef}
       {...attributes}
       {...listeners}
-      className="grid size-8 shrink-0 cursor-grab touch-none place-items-center rounded-lg text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 active:cursor-grabbing"
+      className="grid size-8 shrink-0 cursor-grab touch-none place-items-center rounded-lg text-zinc-300 hover:bg-zinc-100 hover:text-zinc-600 active:cursor-grabbing"
       aria-label="Drag to reorder"
     >
       <GripVertical className="size-4" />
@@ -281,7 +296,7 @@ function SortableItem({ id, children }: { id: string; children: (handle: ReactNo
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Translate.toString(transform), transition, zIndex: isDragging ? 10 : undefined }}
-      className={isDragging ? "relative opacity-90 shadow-xl" : "relative"}
+      className={isDragging ? "relative rounded-2xl shadow-2xl ring-2 ring-emerald-500/40" : "relative"}
     >
       {children(handle)}
     </div>
@@ -303,8 +318,26 @@ export function DeleteButton({ onConfirm, label = "Delete" }: { onConfirm: () =>
   );
 }
 
-export function EmptyState({ children }: { children: ReactNode }) {
-  return <div className="rounded-xl border-2 border-dashed border-zinc-200 px-4 py-8 text-center text-[13px] text-zinc-500">{children}</div>;
+export function EmptyState({ children, icon }: { children: ReactNode; icon?: ReactNode }) {
+  return (
+    <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-zinc-300 bg-zinc-50/60 px-4 py-10 text-center text-[13px] text-zinc-500">
+      {icon && <span className="grid size-11 place-items-center rounded-2xl bg-white text-zinc-400 shadow-sm ring-1 ring-black/5">{icon}</span>}
+      <div>{children}</div>
+    </div>
+  );
+}
+
+/** Shared look for a draggable list row. */
+export const rowCls = "rounded-2xl bg-white ring-1 ring-black/[0.07] shadow-[0_1px_2px_rgb(0_0_0/0.03)] transition hover:ring-black/[0.12]";
+
+/** Small thumbnail that falls back to an icon if the image fails to load. */
+export function Thumb({ src, fallback, round = false }: { src: string; fallback: ReactNode; round?: boolean }) {
+  const [broken, setBroken] = useState<string | null>(null);
+  const shape = round ? "rounded-full" : "rounded-xl";
+  if (src && broken !== src) {
+    return <img src={src} alt="" onError={() => setBroken(src)} className={`size-11 shrink-0 bg-white object-contain ring-1 ring-black/5 ${shape}`} />;
+  }
+  return <span className={`grid size-11 shrink-0 place-items-center bg-zinc-50 text-zinc-400 ring-1 ring-black/5 ${shape}`}>{fallback}</span>;
 }
 
 export function uid(prefix: string) {

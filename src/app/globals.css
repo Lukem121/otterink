@@ -94,6 +94,9 @@ button.lp-card:active {
 .lp-enter > :nth-child(5) { animation-delay: 160ms; }
 .lp-enter > :nth-child(6) { animation-delay: 200ms; }
 .lp-enter > :nth-child(n + 7) { animation-delay: 240ms; }
+.lp-preview .lp-enter > * {
+  animation: none;
+}
 @media (prefers-reduced-motion: reduce) {
   .lp-highlight,
   .lp-enter > * {

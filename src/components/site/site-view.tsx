@@ -113,7 +113,7 @@ export function SiteView({ site, preview = false }: Props) {
 
   return (
     <div
-      className={`lp-root relative isolate ${preview ? "min-h-full" : "min-h-dvh"} lp-btn-${theme.buttonStyle} ${theme.shadow ? "lp-shadow" : ""}`}
+      className={`lp-root relative isolate ${preview ? "lp-preview min-h-full" : "min-h-dvh"} lp-btn-${theme.buttonStyle} ${theme.shadow ? "lp-shadow" : ""}`}
       style={style}
     >
       <div className="absolute inset-0 -z-10 overflow-hidden" style={background} aria-hidden>
@@ -251,11 +251,13 @@ export function SiteView({ site, preview = false }: Props) {
 type ItemClick = (id: string) => (e: MouseEvent) => void;
 
 function Avatar({ url, name }: { url: string; name: string }) {
-  if (url) {
+  const [broken, setBroken] = useState<string | null>(null);
+  if (url && broken !== url) {
     return (
       <img
         src={url}
         alt={name}
+        onError={() => setBroken(url)}
         className="size-[108px] rounded-full object-cover shadow-[0_8px_30px_-6px_rgb(0_0_0/0.35)] ring-4 ring-white/70"
         width={104}
         height={104}
@@ -410,7 +412,7 @@ function ProductGrid({ products, onItemClick, onToast }: { products: Product[]; 
       {products.map((p) => (
         <div key={p.id} className="lp-card relative flex flex-col overflow-hidden">
           <a href={p.url} target="_blank" rel="noopener noreferrer sponsored" onClick={onItemClick(p.id)} className="block">
-            <div className="relative aspect-square w-full overflow-hidden">
+            <div className="relative aspect-[4/5] w-full overflow-hidden bg-white">
               <ImageOrPlaceholder src={p.imageUrl} label={p.title} />
               {p.badge && (
                 <span
@@ -543,7 +545,10 @@ function ItemMenu({ title, url, onToast }: { title: string; url: string; onToast
 }
 
 function ImageOrPlaceholder({ src, label, kind = "product" }: { src: string; label: string; kind?: "product" | "link" }) {
-  if (src) return <img src={src} alt={label} loading="lazy" className="size-full object-cover" />;
+  const [broken, setBroken] = useState<string | null>(null);
+  if (src && broken !== src) {
+    return <img src={src} alt={label} loading="lazy" onError={() => setBroken(src)} className="size-full object-cover" />;
+  }
   const hue = [...label].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7);
   const Icon = kind === "link" ? Sparkles : ShoppingBag;
   return (
