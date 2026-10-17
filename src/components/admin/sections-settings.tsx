@@ -8,7 +8,7 @@ import { SiteSchema, type Site } from "@/lib/types";
 import type { SectionProps } from "./sections-profile";
 import { Button, Card, Field, TextArea, TextInput } from "./ui";
 
-export function SettingsSection({ site, update, storage }: SectionProps & { storage: { mode: string; writable: boolean; blob: boolean } }) {
+export function SettingsSection({ site, update, storage }: SectionProps & { storage: { mode: string; writable: boolean; blob: boolean; analytics: boolean } }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const setSeo = (patch: Partial<Site["seo"]>) => update((s) => ({ ...s, seo: { ...s.seo, ...patch } }));
@@ -64,10 +64,13 @@ export function SettingsSection({ site, update, storage }: SectionProps & { stor
         <ul className="space-y-1.5 text-[13px] text-zinc-700">
           <li>
             Content storage:{" "}
-            <b>{storage.mode === "redis" ? "Upstash Redis ✓" : storage.writable ? "Local file (development)" : "Not connected. Add Upstash Redis in Vercel."}</b>
+            <b>{storage.mode === "blob" ? "Vercel Blob ✓" : storage.mode === "redis" ? "Upstash Redis ✓" : storage.writable ? "Local file (development)" : "Not connected. Add a Blob store in Vercel."}</b>
           </li>
           <li>
             Image storage: <b>{storage.blob ? "Vercel Blob ✓" : storage.writable && storage.mode === "file" ? "Local folder (development)" : "Not connected. Add a Blob store in Vercel."}</b>
+          </li>
+          <li>
+            Analytics: <b>{storage.analytics ? (storage.mode === "file" ? "Local file (development)" : "Upstash Redis ✓") : "Off. Add Upstash for Redis in Vercel → Storage."}</b>
           </li>
         </ul>
       </Card>

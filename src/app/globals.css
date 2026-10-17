@@ -53,6 +53,19 @@ a.lp-card:hover,
 button.lp-card:hover {
   transform: translateY(-2px);
 }
+.lp-shadow a.lp-card:hover,
+.lp-shadow button.lp-card:hover {
+  box-shadow:
+    0 2px 4px rgb(0 0 0 / 0.05),
+    0 14px 30px -10px rgb(0 0 0 / 0.28);
+}
+.lp-card img {
+  transition: transform 0.4s ease;
+}
+a:hover > div > img,
+a.lp-card:hover img {
+  transform: scale(1.03);
+}
 a.lp-card:active,
 button.lp-card:active {
   transform: scale(0.985);
@@ -73,8 +86,14 @@ button.lp-card:active {
   to { opacity: 1; transform: none; }
 }
 .lp-enter > * {
-  animation: lp-fade-up 0.45s ease both;
+  animation: lp-fade-up 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
+.lp-enter > :nth-child(2) { animation-delay: 40ms; }
+.lp-enter > :nth-child(3) { animation-delay: 80ms; }
+.lp-enter > :nth-child(4) { animation-delay: 120ms; }
+.lp-enter > :nth-child(5) { animation-delay: 160ms; }
+.lp-enter > :nth-child(6) { animation-delay: 200ms; }
+.lp-enter > :nth-child(n + 7) { animation-delay: 240ms; }
 @media (prefers-reduced-motion: reduce) {
   .lp-highlight,
   .lp-enter > * {

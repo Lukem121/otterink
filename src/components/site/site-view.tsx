@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-img-element -- images come from Blob or any affiliate host */
 
-import { ArrowLeft, Check, Copy, MoreVertical, Search, Share2, X } from "lucide-react";
+import { ArrowLeft, Check, Copy, MoreVertical, Search, Share2, ShoppingBag, Sparkles, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent } from "react";
 import { fontVar } from "@/lib/themes";
 import type { Collection, LinkItem, Product, Site } from "@/lib/types";
@@ -254,7 +254,7 @@ function Avatar({ url, name }: { url: string; name: string }) {
       <img
         src={url}
         alt={name}
-        className="size-[104px] rounded-full object-cover shadow-md ring-4 ring-white/60"
+        className="size-[108px] rounded-full object-cover shadow-[0_8px_30px_-6px_rgb(0_0_0/0.35)] ring-4 ring-white/70"
         width={104}
         height={104}
       />
@@ -268,7 +268,7 @@ function Avatar({ url, name }: { url: string; name: string }) {
     .toUpperCase();
   return (
     <div
-      className="lp-heading grid size-[104px] place-items-center rounded-full text-3xl font-bold shadow-md ring-4 ring-white/60"
+      className="lp-heading grid size-[108px] place-items-center rounded-full text-3xl font-bold shadow-[0_8px_30px_-6px_rgb(0_0_0/0.35)] ring-4 ring-white/70"
       style={{ background: "var(--lp-accent)", color: "var(--lp-accent-text)" }}
     >
       {initials || "?"}
@@ -298,7 +298,7 @@ function LinksList({ links, onItemClick, onToast }: { links: LinkItem[]; onItemC
               className={`lp-card lp-link block overflow-hidden ${l.highlight ? "lp-highlight" : ""}`}
             >
               <div className="aspect-[16/9] w-full overflow-hidden">
-                <ImageOrPlaceholder src={l.imageUrl} label={l.title} />
+                <ImageOrPlaceholder src={l.imageUrl} label={l.title} kind="link" />
               </div>
               <div className="relative px-5 py-3.5 text-center">
                 <div className="text-[16px] font-semibold">{l.title}</div>
@@ -540,15 +540,24 @@ function ItemMenu({ title, url, onToast }: { title: string; url: string; onToast
   );
 }
 
-function ImageOrPlaceholder({ src, label }: { src: string; label: string }) {
+function ImageOrPlaceholder({ src, label, kind = "product" }: { src: string; label: string; kind?: "product" | "link" }) {
   if (src) return <img src={src} alt={label} loading="lazy" className="size-full object-cover" />;
   const hue = [...label].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7);
+  const Icon = kind === "link" ? Sparkles : ShoppingBag;
   return (
     <div
-      className="lp-heading grid size-full place-items-center text-4xl font-bold text-white/90"
-      style={{ background: `linear-gradient(135deg, hsl(${hue} 70% 72%), hsl(${(hue + 40) % 360} 70% 62%))` }}
+      className="relative grid size-full place-items-center overflow-hidden"
+      style={{ background: `linear-gradient(140deg, hsl(${hue} 75% 90%), hsl(${(hue + 50) % 360} 70% 80%))` }}
+      aria-hidden
     >
-      {label.trim()[0]?.toUpperCase() ?? ""}
+      <span className="absolute -right-6 -top-6 size-24 rounded-full bg-white/35 blur-xl" />
+      <span className="absolute -bottom-8 -left-4 size-28 rounded-full blur-2xl" style={{ background: `hsl(${(hue + 25) % 360} 80% 75% / 0.6)` }} />
+      <span
+        className="relative grid size-14 place-items-center rounded-2xl bg-white/60 shadow-sm ring-1 ring-white/70 backdrop-blur"
+        style={{ color: `hsl(${hue} 45% 38%)` }}
+      >
+        <Icon className="size-6" strokeWidth={1.8} />
+      </span>
     </div>
   );
 }

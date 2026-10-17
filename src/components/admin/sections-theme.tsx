@@ -22,8 +22,8 @@ export function ThemeSection({ site, update }: SectionProps) {
               className={`relative overflow-hidden rounded-xl text-left ring-2 transition ${t.preset === key ? "ring-zinc-900" : "ring-transparent hover:ring-zinc-300"}`}
             >
               <div className="flex h-24 flex-col items-center justify-center gap-1.5 p-3" style={{ background: `linear-gradient(180deg, ${p.bgFrom}, ${p.bgTo})` }}>
-                <div className="h-3 w-3/4 rounded-full" style={{ background: p.cardBg, borderRadius: p.radius }} />
-                <div className="h-3 w-3/4 rounded-full" style={{ background: p.cardBg, borderRadius: p.radius }} />
+                <div className="h-3 w-3/4" style={{ background: p.cardBg, borderRadius: p.radius, boxShadow: p.buttonStyle === "outline" ? `inset 0 0 0 1.5px ${p.text}` : undefined }} />
+                <div className="h-3 w-3/4" style={{ background: p.cardBg, borderRadius: p.radius, boxShadow: p.buttonStyle === "outline" ? `inset 0 0 0 1.5px ${p.text}` : undefined }} />
                 <div className="h-3 w-1/2 rounded-full" style={{ background: p.accent }} />
               </div>
               <div className="flex items-center justify-between bg-white px-3 py-2 text-[13px] font-medium" style={{ fontFamily: fontVar(p.headingFont) }}>

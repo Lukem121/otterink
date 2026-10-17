@@ -24,7 +24,7 @@ const TABS = [
 ] as const;
 type TabId = (typeof TABS)[number]["id"];
 
-type Storage = { mode: string; writable: boolean; blob: boolean };
+type Storage = { mode: string; writable: boolean; blob: boolean; analytics: boolean };
 
 export function Editor({ initial, storage }: { initial: Site; storage: Storage }) {
   const [site, setSite] = useState(initial);
@@ -137,8 +137,7 @@ export function Editor({ initial, storage }: { initial: Site; storage: Storage }
           <div className="mx-auto max-w-2xl">
             {!storage.writable && (
               <div className="mb-5 rounded-2xl bg-amber-50 p-4 text-[13px] text-amber-900 ring-1 ring-amber-200">
-                <b>Saving is off.</b> Connect Upstash Redis (content) and a Blob store (images) to this project in Vercel → Storage, then
-                redeploy.
+                <b>Saving is off.</b> Connect a Blob store to this project in Vercel → Storage, then redeploy.
               </div>
             )}
             {tab === "profile" && <ProfileSection {...props} />}
@@ -146,7 +145,7 @@ export function Editor({ initial, storage }: { initial: Site; storage: Storage }
             {tab === "links" && <LinksSection {...props} />}
             {tab === "shop" && <ShopSection {...props} />}
             {tab === "theme" && <ThemeSection {...props} />}
-            {tab === "analytics" && <AnalyticsSection site={saved} />}
+            {tab === "analytics" && <AnalyticsSection site={saved} enabled={storage.analytics} />}
             {tab === "settings" && <SettingsSection {...props} storage={storage} />}
           </div>
         </main>

@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { Editor } from "@/components/admin/editor";
 import { isAdmin } from "@/lib/auth";
-import { readSite, storageMode, storageWritable } from "@/lib/store";
+import { analyticsEnabled, readSite, storageMode, storageWritable } from "@/lib/store";
 
 export const metadata: Metadata = { title: "Admin", robots: { index: false, follow: false } };
 
@@ -21,7 +21,7 @@ async function AdminLoader() {
   return (
     <Editor
       initial={site}
-      storage={{ mode: storageMode, writable: storageWritable, blob: !!process.env.BLOB_READ_WRITE_TOKEN }}
+      storage={{ mode: storageMode, writable: storageWritable, blob: !!process.env.BLOB_READ_WRITE_TOKEN, analytics: analyticsEnabled }}
     />
   );
 }

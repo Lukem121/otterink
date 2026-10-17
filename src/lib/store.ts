@@ -1,22 +1,26 @@
 import "server-only";
 import { Redis } from "@upstash/redis";
+import { del, list, put } from "@vercel/blob";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { normalizeSite } from "./defaults";
 import type { Analytics, Site } from "./types";
 
 /**
- * Storage: Upstash Redis when its env vars exist (production on Vercel),
- * otherwise a JSON file in .data/ (local development).
+ * Content: Vercel Blob if connected, else Upstash Redis, else a JSON file in .data/ (local dev).
+ * Analytics: Upstash Redis if connected, else the local file (dev only).
  */
 
 const redisUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
 const redisToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
 const redis = redisUrl && redisToken ? new Redis({ url: redisUrl, token: redisToken }) : null;
 
-export const storageMode: "redis" | "file" = redis ? "redis" : "file";
+const blob = !!process.env.BLOB_READ_WRITE_TOKEN;
+
+export const storageMode: "blob" | "redis" | "file" = blob ? "blob" : redis ? "redis" : "file";
 /** On Vercel the filesystem is read-only, so file mode cannot save. */
-export const storageWritable = !!redis || !process.env.VERCEL;
+export const storageWritable = blob || !!redis || !process.env.VERCEL;
+export const analyticsEnabled = !!redis || !process.env.VERCEL;
 
 const SITE_KEY = "site";
 const DAY_TTL = 60 * 60 * 24 * 400;
@@ -39,7 +43,22 @@ async function writeFileDb(db: FileDb) {
   await fs.writeFile(FILE, JSON.stringify(db, null, 2));
 }
 
+const BLOB_PREFIX = "content/site-";
+const BLOB_KEEP = 20;
+
+/** Each save is a new immutable blob, so reads are never stale and old versions act as history. */
+async function blobVersions() {
+  const { blobs } = await list({ prefix: BLOB_PREFIX, limit: 1000 });
+  return blobs.sort((a, b) => +new Date(b.uploadedAt) - +new Date(a.uploadedAt));
+}
+
 export async function readSite(): Promise<Site> {
+  if (blob) {
+    const [latest] = await blobVersions();
+    if (!latest) return normalizeSite(null);
+    const res = await fetch(latest.url, { cache: "no-store" });
+    return normalizeSite(await res.json());
+  }
   if (redis) return normalizeSite(await redis.get<Site>(SITE_KEY));
   return normalizeSite((await readFileDb()).site);
 }
@@ -47,6 +66,16 @@ export async function readSite(): Promise<Site> {
 export async function writeSite(site: Site) {
   if (!storageWritable) {
     throw new Error("Storage is not connected. Add Upstash Redis to this project in Vercel, then redeploy.");
+  }
+  if (blob) {
+    await put(`${BLOB_PREFIX}${Date.now()}.json`, JSON.stringify(site), {
+      access: "public",
+      addRandomSuffix: true,
+      contentType: "application/json",
+    });
+    const old = (await blobVersions()).slice(BLOB_KEEP).map((b) => b.url);
+    if (old.length) await del(old);
+    return;
   }
   if (redis) {
     await redis.set(SITE_KEY, site);
@@ -72,7 +101,7 @@ export async function recordView(source: string) {
     await p.exec();
     return;
   }
-  if (!storageWritable) return;
+  if (!analyticsEnabled) return;
   const db = await readFileDb();
   const stat = ((db.stats ??= {})[day] ??= { v: 0, c: {}, s: {} });
   stat.v++;
@@ -89,7 +118,7 @@ export async function recordClick(itemId: string) {
     await p.exec();
     return;
   }
-  if (!storageWritable) return;
+  if (!analyticsEnabled) return;
   const db = await readFileDb();
   const stat = ((db.stats ??= {})[day] ??= { v: 0, c: {}, s: {} });
   stat.c[itemId] = (stat.c[itemId] ?? 0) + 1;
