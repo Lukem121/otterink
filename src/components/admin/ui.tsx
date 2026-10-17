@@ -174,13 +174,18 @@ export function ImageInput({
     setBusy(true);
     setError(null);
     try {
+      const prepared = await compress(file, maxSize);
+      if (prepared.size > 4 * 1024 * 1024) {
+        setError(`That image is ${(prepared.size / 1048576).toFixed(1)} MB. The limit is 4 MB, so try a smaller photo or a screenshot of it.`);
+        return;
+      }
       const fd = new FormData();
-      fd.set("file", await compress(file, maxSize));
+      fd.set("file", prepared);
       const res = await uploadImage(fd);
       if ("error" in res) setError(res.error);
       else onChange(res.url);
-    } catch {
-      setError("Upload failed");
+    } catch (e) {
+      setError(`Upload failed${e instanceof Error && e.message ? `: ${e.message.slice(0, 120)}` : ""}. Try again, or paste an image link instead.`);
     } finally {
       setBusy(false);
     }
