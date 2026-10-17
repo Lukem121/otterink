@@ -52,8 +52,7 @@ export function AnalyticsSection({ site, enabled }: { site: Site; enabled: boole
 
       {!enabled && (
         <div className="rounded-2xl bg-sky-50 p-4 text-[13px] leading-relaxed text-sky-900 ring-1 ring-sky-200">
-          <b>Analytics is off.</b> To turn it on: in Vercel, open this project → <b>Storage</b> → <b>Create Database</b> →{" "}
-          <b>Upstash for Redis</b> (free) → connect it to this project, then redeploy.
+          <b>Analytics is off.</b> Connect a Blob store to this project in Vercel → <b>Storage</b>, then redeploy.
         </div>
       )}
       {error && <p className="text-[13px] text-red-600">{error}</p>}

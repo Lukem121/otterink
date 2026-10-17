@@ -3,11 +3,11 @@
 import { timingSafeEqual, createHash, randomBytes } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { put } from "@vercel/blob";
 import { cookies } from "next/headers";
 import { updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
+import { blobEnabled, blobPut, publicUrl } from "@/lib/blob";
 import { adminPassword, createSessionToken, SESSION_COOKIE, SESSION_DAYS } from "@/lib/session";
 import { readAnalytics, writeSite } from "@/lib/store";
 import { SiteSchema, type Analytics, type Site } from "@/lib/types";
@@ -72,9 +72,12 @@ export async function uploadImage(form: FormData): Promise<{ url: string } | { e
   const ext = (file.type.split("/")[1] ?? "png").replace("svg+xml", "svg").replace("jpeg", "jpg");
   const name = `${Date.now().toString(36)}-${randomBytes(4).toString("hex")}.${ext}`;
 
-  if (process.env.BLOB_READ_WRITE_TOKEN) {
-    const blob = await put(`images/${name}`, file, { access: "public", contentType: file.type });
-    return { url: blob.url };
+  if (blobEnabled) {
+    try {
+      return { url: publicUrl(await blobPut(`images/${name}`, file, file.type)) };
+    } catch (e) {
+      return { error: e instanceof Error ? e.message : "Upload failed" };
+    }
   }
   if (process.env.VERCEL) {
     return { error: "Image storage is not connected. Add a Blob store to this project in Vercel, then redeploy." };

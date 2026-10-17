@@ -1,6 +1,8 @@
 import "server-only";
 import { Redis } from "@upstash/redis";
-import { del, list, put } from "@vercel/blob";
+import { del, list } from "@vercel/blob";
+import { blobEnabled as blob, blobGetText, blobPut } from "./blob";
+import { queueStat, readBlobStats, type StatDay } from "./blob-stats";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { normalizeSite } from "./defaults";
@@ -8,24 +10,21 @@ import type { Analytics, Site } from "./types";
 
 /**
  * Content: Vercel Blob if connected, else Upstash Redis, else a JSON file in .data/ (local dev).
- * Analytics: Upstash Redis if connected, else the local file (dev only).
+ * Analytics: Upstash Redis if connected, else Vercel Blob, else the local file (dev only).
  */
 
 const redisUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
 const redisToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
 const redis = redisUrl && redisToken ? new Redis({ url: redisUrl, token: redisToken }) : null;
 
-const blob = !!process.env.BLOB_READ_WRITE_TOKEN;
-
 export const storageMode: "blob" | "redis" | "file" = blob ? "blob" : redis ? "redis" : "file";
 /** On Vercel the filesystem is read-only, so file mode cannot save. */
 export const storageWritable = blob || !!redis || !process.env.VERCEL;
-export const analyticsEnabled = !!redis || !process.env.VERCEL;
+export const analyticsEnabled = !!redis || blob || !process.env.VERCEL;
 
 const SITE_KEY = "site";
 const DAY_TTL = 60 * 60 * 24 * 400;
 
-type StatDay = { v: number; c: Record<string, number>; s: Record<string, number> };
 type FileDb = { site?: Site; stats?: Record<string, StatDay> };
 
 const FILE = path.join(process.cwd(), ".data", "db.json");
@@ -56,8 +55,8 @@ export async function readSite(): Promise<Site> {
   if (blob) {
     const [latest] = await blobVersions();
     if (!latest) return normalizeSite(null);
-    const res = await fetch(latest.url, { cache: "no-store" });
-    return normalizeSite(await res.json());
+    const text = await blobGetText(latest.url);
+    return normalizeSite(text ? JSON.parse(text) : null);
   }
   if (redis) return normalizeSite(await redis.get<Site>(SITE_KEY));
   return normalizeSite((await readFileDb()).site);
@@ -65,14 +64,10 @@ export async function readSite(): Promise<Site> {
 
 export async function writeSite(site: Site) {
   if (!storageWritable) {
-    throw new Error("Storage is not connected. Add Upstash Redis to this project in Vercel, then redeploy.");
+    throw new Error("Storage is not connected. Add a Blob store to this project in Vercel, then redeploy.");
   }
   if (blob) {
-    await put(`${BLOB_PREFIX}${Date.now()}.json`, JSON.stringify(site), {
-      access: "public",
-      addRandomSuffix: true,
-      contentType: "application/json",
-    });
+    await blobPut(`${BLOB_PREFIX}${Date.now()}.json`, JSON.stringify(site), "application/json");
     const old = (await blobVersions()).slice(BLOB_KEEP).map((b) => b.url);
     if (old.length) await del(old);
     return;
@@ -101,6 +96,12 @@ export async function recordView(source: string) {
     await p.exec();
     return;
   }
+  if (blob) {
+    return queueStat(day, (stat) => {
+      stat.v++;
+      stat.s[source] = (stat.s[source] ?? 0) + 1;
+    });
+  }
   if (!analyticsEnabled) return;
   const db = await readFileDb();
   const stat = ((db.stats ??= {})[day] ??= { v: 0, c: {}, s: {} });
@@ -117,6 +118,11 @@ export async function recordClick(itemId: string) {
     p.expire(`a:c:${day}`, DAY_TTL);
     await p.exec();
     return;
+  }
+  if (blob) {
+    return queueStat(day, (stat) => {
+      stat.c[itemId] = (stat.c[itemId] ?? 0) + 1;
+    });
   }
   if (!analyticsEnabled) return;
   const db = await readFileDb();
@@ -144,6 +150,9 @@ export async function readAnalytics(numDays: number): Promise<Analytics> {
       c: (res[i * 3 + 1] as Record<string, number> | null) ?? {},
       s: (res[i * 3 + 2] as Record<string, number> | null) ?? {},
     }));
+  } else if (blob) {
+    const stats = await readBlobStats(days, dayKey());
+    raw = days.map((d) => stats[d] ?? { v: 0, c: {}, s: {} });
   } else {
     const db = await readFileDb();
     raw = days.map((d) => db.stats?.[d] ?? { v: 0, c: {}, s: {} });

@@ -70,7 +70,7 @@ export function SettingsSection({ site, update, storage }: SectionProps & { stor
             Image storage: <b>{storage.blob ? "Vercel Blob ✓" : storage.writable && storage.mode === "file" ? "Local folder (development)" : "Not connected. Add a Blob store in Vercel."}</b>
           </li>
           <li>
-            Analytics: <b>{storage.analytics ? (storage.mode === "file" ? "Local file (development)" : "Upstash Redis ✓") : "Off. Add Upstash for Redis in Vercel → Storage."}</b>
+            Analytics: <b>{storage.analytics ? (storage.mode === "file" ? "Local file (development)" : "On ✓") : "Off. Add a Blob store in Vercel → Storage."}</b>
           </li>
         </ul>
       </Card>

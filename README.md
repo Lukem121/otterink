@@ -19,8 +19,7 @@ Local content is saved to `.data/` (git-ignored).
 
 1. Import this repo at vercel.com/new.
 2. In the project, open **Storage**:
-   - Create **Upstash for Redis** (free tier) and connect it to the project. This stores your content and analytics.
-   - Create a **Blob** store and connect it. This stores uploaded images.
+   - Create a **Blob** store and connect it. This stores your content, images and analytics.
 3. In **Settings → Environment Variables**, add `ADMIN_PASSWORD`.
 4. Redeploy, then go to `https://your-domain/admin`.
 
@@ -29,7 +28,7 @@ Local content is saved to `.data/` (git-ignored).
 | Piece | Where |
 | --- | --- |
 | Data shape and validation | `src/lib/types.ts` |
-| Storage (Redis, or a file locally) | `src/lib/store.ts` |
+| Storage (Vercel Blob, or a file locally) | `src/lib/store.ts`, `src/lib/blob.ts`, `src/lib/blob-stats.ts` |
 | Login (signed cookie, single admin) | `src/lib/session.ts`, `src/proxy.ts`, `src/app/admin/actions.ts` |
 | Public page UI | `src/components/site/site-view.tsx` |
 | Admin editor | `src/components/admin/` |
