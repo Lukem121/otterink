@@ -1,11 +1,11 @@
 "use client";
 /* eslint-disable @next/next/no-img-element -- images come from Blob or any affiliate host */
 
-import { ArrowLeft, Check, Copy, MoreVertical, Search, Share2, ShoppingBag, Sparkles, X } from "lucide-react";
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent } from "react";
+import { ArrowLeft, Check, ChevronDown, Copy, MoreVertical, Search, Share2, ShoppingBag, Sparkles, X } from "lucide-react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 import type { EventType, ItemKind } from "@/lib/analytics-types";
 import { fontVar } from "@/lib/themes";
-import type { Collection, LinkItem, Product, Site } from "@/lib/types";
+import type { Category, Collection, LinkItem, Product, Site } from "@/lib/types";
 import { SOCIALS } from "./social-icons";
 
 type Tab = "links" | "shop";
@@ -399,6 +399,9 @@ function ShopView({
     ? products.filter((p) => `${p.title} ${p.description} ${p.badge}`.toLowerCase().includes(q))
     : products.filter((p) => p.showInGrid);
 
+  // Search results stay one flat grid; otherwise products sit under their category headings.
+  const groups = q ? null : groupByCategory(results, site.categories);
+
   const collectionCards = !q && collections.length > 0 && (
     <div className="flex flex-col gap-4">
       {collections.map((c) => (
@@ -432,13 +435,79 @@ function ShopView({
         </label>
       )}
       {site.shop.collectionsPosition === "top" && collectionCards}
-      {results.length > 0 ? (
+      {results.length > 0 && groups ? (
+        groups.map((g) => (
+          <CategorySection key={g.id} title={g.title} count={g.products.length} fold={site.shop.foldCategories} startOpen={g.startOpen}>
+            <ProductGrid products={g.products} onItemClick={onItemClick} onToast={onToast} buyLabel={site.shop.buyLabel} />
+          </CategorySection>
+        ))
+      ) : results.length > 0 ? (
         <ProductGrid products={results} onItemClick={onItemClick} onToast={onToast} buyLabel={site.shop.buyLabel} />
       ) : q ? (
         <p className="py-10 text-center opacity-70">No products match “{query}”.</p>
       ) : null}
       {site.shop.collectionsPosition === "bottom" && collectionCards}
     </div>
+  );
+}
+
+type CategoryGroup = { id: string; title: string; startOpen: boolean; products: Product[] };
+
+/** Products under each visible category in category order, then the rest under "More". Null when nothing is categorised. */
+function groupByCategory(products: Product[], categories: Category[]): CategoryGroup[] | null {
+  const live = categories.filter((c) => c.enabled && c.title.trim());
+  const hidden = new Set(categories.filter((c) => !c.enabled).map((c) => c.id));
+  const groups = live
+    .map((c) => ({ id: c.id, title: c.title, startOpen: c.startOpen, products: products.filter((p) => p.categoryId === c.id) }))
+    .filter((g) => g.products.length > 0);
+  if (groups.length === 0) return null;
+  const placed = new Set(groups.flatMap((g) => g.products.map((p) => p.id)));
+  const rest = products.filter((p) => !placed.has(p.id) && !hidden.has(p.categoryId));
+  if (rest.length > 0) groups.push({ id: "more", title: "More", startOpen: true, products: rest });
+  return groups;
+}
+
+function CategorySection({
+  title,
+  count,
+  fold,
+  startOpen,
+  children,
+}: {
+  title: string;
+  count: number;
+  fold: boolean;
+  startOpen: boolean;
+  children: ReactNode;
+}) {
+  const heading = (
+    <h2 className="text-[20px] font-extrabold leading-tight" style={{ color: "var(--lp-heading-color)" }}>
+      {title}
+    </h2>
+  );
+  if (!fold) {
+    return (
+      <section className="flex flex-col gap-3 pt-2">
+        {heading}
+        {children}
+      </section>
+    );
+  }
+  return (
+    <details open={startOpen} className="group pt-2">
+      <summary className="flex cursor-pointer list-none items-center gap-2 py-1 [&::-webkit-details-marker]:hidden">
+        {heading}
+        <span className="text-[13px] font-semibold tabular-nums" style={{ color: "var(--lp-muted)" }}>
+          {count}
+        </span>
+        <ChevronDown
+          className="ml-auto size-5 transition-transform group-open:rotate-180"
+          style={{ color: "var(--lp-heading-color)" }}
+          aria-hidden
+        />
+      </summary>
+      <div className="mt-3">{children}</div>
+    </details>
   );
 }
 

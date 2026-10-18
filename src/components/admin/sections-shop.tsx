@@ -1,9 +1,9 @@
 "use client";
 
-import { AlertTriangle, ChevronDown, FolderHeart, Loader2, Package, Plus, Search, Wand2 } from "lucide-react";
+import { AlertTriangle, ChevronDown, FolderHeart, Loader2, Package, Plus, Rows3, Search, Wand2 } from "lucide-react";
 import { useState } from "react";
 import { fetchPreview } from "@/app/admin/actions";
-import type { Collection, Product, Site } from "@/lib/types";
+import type { Category, Collection, Product, Site } from "@/lib/types";
 import type { SectionProps } from "./sections-profile";
 import { Button, Card, DeleteButton, EmptyState, Field, ImageInput, Select, SortableList, TextArea, TextInput, Thumb, Toggle, ToggleRow, rowCls, uid } from "./ui";
 
@@ -11,6 +11,7 @@ export function ShopSection({ site, update }: SectionProps) {
   return (
     <div className="space-y-5">
       <ProductsCard site={site} update={update} />
+      <CategoriesCard site={site} update={update} />
       <CollectionsCard site={site} update={update} />
       <ShopSettingsCard site={site} update={update} />
     </div>
@@ -57,6 +58,7 @@ function ProductsCard({ site, update }: SectionProps) {
       enabled: true,
       showInGrid: true,
       collectionIds: [],
+      categoryId: "",
     };
     setProducts([p, ...site.products]);
     setOpen(p.id);
@@ -100,6 +102,7 @@ function ProductsCard({ site, update }: SectionProps) {
               item={item}
               handle={handle}
               collections={site.collections}
+              categories={site.categories}
               open={open === item.id}
               onToggleOpen={() => setOpen(open === item.id ? null : item.id)}
               onChange={(patch) => setProducts(site.products.map((p) => (p.id === item.id ? { ...p, ...patch } : p)))}
@@ -116,6 +119,7 @@ function ProductRow({
   item,
   handle,
   collections,
+  categories,
   open,
   onToggleOpen,
   onChange,
@@ -124,6 +128,7 @@ function ProductRow({
   item: Product;
   handle: React.ReactNode;
   collections: Collection[];
+  categories: Category[];
   open: boolean;
   onToggleOpen: () => void;
   onChange: (p: Partial<Product>) => void;
@@ -132,6 +137,7 @@ function ProductRow({
   const [fetching, setFetching] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const warning = amazonWarning(item.url);
+  const category = categories.find((c) => c.id === item.categoryId);
 
   async function autofill() {
     setFetching(true);
@@ -163,6 +169,7 @@ function ProductRow({
             {warning && <AlertTriangle className="size-3.5 shrink-0 text-amber-500" />}
           </div>
           <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[12px] text-zinc-500">
+            {category && <span className="shrink-0 rounded-md bg-sky-50 px-1.5 py-0.5 text-[11px] font-medium text-sky-700">{category.title || "Untitled"}</span>}
             {store(item.url) && <span className="shrink-0 rounded-md bg-zinc-100 px-1.5 py-0.5 text-[11px] font-medium text-zinc-600">{store(item.url)}</span>}
             {item.badge && <span className="shrink-0 rounded-md bg-emerald-50 px-1.5 py-0.5 text-[11px] font-medium text-emerald-700">{item.badge}</span>}
             <span className="truncate">
@@ -209,6 +216,15 @@ function ProductRow({
           <Field label="Notes" hint="Optional. Not shown on the card, but included in search.">
             <TextArea value={item.description} onChange={(description) => onChange({ description })} rows={2} maxLength={500} />
           </Field>
+          {categories.length > 0 && (
+            <Field label="Category">
+              <Select
+                value={category ? item.categoryId : ""}
+                onChange={(categoryId) => onChange({ categoryId })}
+                options={[{ value: "", label: "No category" }, ...categories.map((c) => ({ value: c.id, label: c.title || "Untitled" }))]}
+              />
+            </Field>
+          )}
           {collections.length > 0 && (
             <Field label="Collections">
               <div className="flex flex-wrap gap-2">
@@ -242,6 +258,100 @@ function ProductRow({
         </div>
       )}
     </div>
+  );
+}
+
+function CategoriesCard({ site, update }: SectionProps) {
+  const [open, setOpen] = useState<string | null>(null);
+  const setCategories = (categories: Site["categories"]) => update((s) => ({ ...s, categories }));
+  const count = (id: string) => site.products.filter((p) => p.categoryId === id).length;
+  const fold = site.shop.foldCategories;
+
+  return (
+    <Card
+      title="Categories"
+      description="Headings on the Shop tab, like Books or Pens. Drag to set their order, then pick a category in each product."
+      actions={
+        <Button
+          variant="primary"
+          onClick={() => {
+            const c: Category = { id: uid("k"), title: "", enabled: true, startOpen: true };
+            setCategories([...site.categories, c]);
+            setOpen(c.id);
+          }}
+        >
+          <Plus className="size-4" /> Category
+        </Button>
+      }
+    >
+      {site.categories.length === 0 ? (
+        <EmptyState icon={<Rows3 className="size-5" />}>No categories yet. Add one to split your shop into sections.</EmptyState>
+      ) : (
+        <div className="space-y-4">
+          <SortableList
+            items={site.categories}
+            onChange={setCategories}
+            render={(item, handle) => {
+              const patch = (p: Partial<Category>) => setCategories(site.categories.map((c) => (c.id === item.id ? { ...c, ...p } : c)));
+              const isOpen = open === item.id;
+              const n = count(item.id);
+              return (
+                <div className={`${rowCls} ${item.enabled ? "" : "opacity-60"}`}>
+                  <div className="flex items-center gap-2 p-2">
+                    {handle}
+                    <button type="button" onClick={() => setOpen(isOpen ? null : item.id)} className="min-w-0 flex-1 text-left">
+                      <div className="truncate text-[14px] font-medium text-zinc-900">{item.title || <span className="text-zinc-400">Untitled category</span>}</div>
+                      <div className="text-[12px] text-zinc-500">
+                        {n} product{n === 1 ? "" : "s"}
+                        {n === 0 ? " · hidden until it has products" : fold && !item.startOpen ? " · starts closed" : ""}
+                        {!item.enabled && n > 0 && " · its products are hidden too"}
+                      </div>
+                    </button>
+                    <Toggle checked={item.enabled} onChange={(enabled) => patch({ enabled })} label="Visible" />
+                    <button type="button" onClick={() => setOpen(isOpen ? null : item.id)} className="grid size-8 place-items-center rounded-lg text-zinc-500 hover:bg-zinc-200/60" aria-label="Edit">
+                      <ChevronDown className={`size-4 transition ${isOpen ? "rotate-180" : ""}`} />
+                    </button>
+                  </div>
+                  {isOpen && (
+                    <div className="space-y-4 border-t border-black/[0.06] p-4 sm:p-5">
+                      <Field label="Name">
+                        <TextInput value={item.title} onChange={(title) => patch({ title })} placeholder="Books" maxLength={80} autoFocus />
+                      </Field>
+                      {fold && (
+                        <ToggleRow
+                          label="Starts open"
+                          hint="Turn off to show just the heading until someone taps it."
+                          checked={item.startOpen}
+                          onChange={(startOpen) => patch({ startOpen })}
+                        />
+                      )}
+                      <div className="flex justify-end">
+                        <DeleteButton
+                          onConfirm={() =>
+                            update((s) => ({
+                              ...s,
+                              categories: s.categories.filter((c) => c.id !== item.id),
+                              products: s.products.map((p) => (p.categoryId === item.id ? { ...p, categoryId: "" } : p)),
+                            }))
+                          }
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            }}
+          />
+          <ToggleRow
+            label="Fold-up categories"
+            hint="Tap a heading to open or close it. Off shows plain headings with everything visible."
+            checked={fold}
+            onChange={(foldCategories) => update((s) => ({ ...s, shop: { ...s.shop, foldCategories } }))}
+          />
+          <p className="text-[12px] text-zinc-500">Products without a category show last, under “More”. Searching shows all matches in one list.</p>
+        </div>
+      )}
+    </Card>
   );
 }
 

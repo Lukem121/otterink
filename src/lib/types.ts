@@ -73,6 +73,16 @@ export const ProductSchema = z.object({
   enabled: z.boolean(),
   showInGrid: z.boolean(),
   collectionIds: z.array(id).max(100),
+  /** Empty when the product has no category. */
+  categoryId: text(64),
+});
+
+/** A heading on the Shop tab that groups products, e.g. Books or Pens. */
+export const CategorySchema = z.object({
+  id,
+  title: text(80),
+  enabled: z.boolean(),
+  startOpen: z.boolean(),
 });
 
 export const CollectionSchema = z.object({
@@ -117,6 +127,7 @@ export const SiteSchema = z.object({
   links: z.array(LinkSchema).max(200),
   products: z.array(ProductSchema).max(500),
   collections: z.array(CollectionSchema).max(100),
+  categories: z.array(CategorySchema).max(100),
   shop: z.object({
     enabled: z.boolean(),
     linksLabel: text(30),
@@ -128,6 +139,8 @@ export const SiteSchema = z.object({
     disclosure: text(400),
     /** Text of the button on product cards; empty hides it. */
     buyLabel: text(30),
+    /** Category headings open and close when tapped. */
+    foldCategories: z.boolean(),
   }),
   theme: ThemeSchema,
   seo: z.object({
@@ -142,6 +155,7 @@ export type SocialPlatform = Social["platform"];
 export type LinkItem = z.infer<typeof LinkSchema>;
 export type Product = z.infer<typeof ProductSchema>;
 export type Collection = z.infer<typeof CollectionSchema>;
+export type Category = z.infer<typeof CategorySchema>;
 export type Theme = z.infer<typeof ThemeSchema>;
 export type FontKey = Theme["font"];
 export type Site = z.infer<typeof SiteSchema>;

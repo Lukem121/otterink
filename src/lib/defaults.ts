@@ -1,5 +1,5 @@
 import { presetTheme } from "./themes";
-import type { Collection, LinkItem, Product, Site } from "./types";
+import type { Category, Collection, LinkItem, Product, Site } from "./types";
 
 /** Starting content, migrated from beacons.ai/otter.inkk. Used until the first save in the admin. */
 export function defaultSite(): Site {
@@ -26,6 +26,7 @@ export function defaultSite(): Site {
       product("p-7", "Cozy Corner", "https://link.amazon/B00UNORrh", amazonImage("81B7Me20erL")),
     ],
     collections: [],
+    categories: [],
     shop: {
       enabled: true,
       linksLabel: "Links",
@@ -36,6 +37,7 @@ export function defaultSite(): Site {
       collectionsPosition: "bottom",
       disclosure: "",
       buyLabel: "",
+      foldCategories: true,
     },
     theme: presetTheme("mint"),
     seo: { title: "Otter.inkk", description: "Cozy coloring books and the art supplies I use." },
@@ -60,6 +62,7 @@ function product(id: string, title: string, url: string, imageUrl = ""): Product
     enabled: true,
     showInGrid: true,
     collectionIds: [],
+    categoryId: "",
   };
 }
 
@@ -75,10 +78,11 @@ const BLANK_LINK: LinkItem = {
 };
 const BLANK_PRODUCT = product("", "", "");
 const BLANK_COLLECTION: Collection = { id: "", title: "", description: "", enabled: true };
+const BLANK_CATEGORY: Category = { id: "", title: "", enabled: true, startOpen: true };
 
-/** Fill any fields missing from older saved data with defaults. */
 const OLD_DISCLOSURE = "As an Amazon Associate I earn from qualifying purchases.";
 
+/** Fill any fields missing from older saved data with defaults. */
 export function normalizeSite(raw: unknown): Site {
   const d = defaultSite();
   const s = (raw ?? {}) as Partial<Site>;
@@ -98,6 +102,7 @@ export function normalizeSite(raw: unknown): Site {
     links: (s.links ?? d.links).map((l) => ({ ...BLANK_LINK, ...l })),
     products: (s.products ?? d.products).map((p) => withSeedImage({ ...BLANK_PRODUCT, ...p }, d.products)),
     collections: (s.collections ?? d.collections).map((c) => ({ ...BLANK_COLLECTION, ...c })),
+    categories: (s.categories ?? d.categories).map((c) => ({ ...BLANK_CATEGORY, ...c })),
   };
 }
 
