@@ -64,13 +64,13 @@ export function SettingsSection({ site, update, storage }: SectionProps & { stor
         <ul className="space-y-1.5 text-[13px] text-zinc-700">
           <li>
             Content storage:{" "}
-            <b>{storage.mode === "blob" ? "Vercel Blob ✓" : storage.mode === "redis" ? "Upstash Redis ✓" : storage.writable ? "Local file (development)" : "Not connected. Add a Blob store in Vercel."}</b>
+            <b>{storage.mode === "blob" ? "Vercel Blob ✓" : storage.writable ? "Local file (development)" : "Not connected. Add a Blob store in Vercel."}</b>
           </li>
           <li>
             Image storage: <b>{storage.blob ? "Vercel Blob ✓" : storage.writable && storage.mode === "file" ? "Local folder (development)" : "Not connected. Add a Blob store in Vercel."}</b>
           </li>
           <li>
-            Analytics: <b>{storage.analytics ? (storage.mode === "file" ? "Local file (development)" : "On ✓") : "Off. Add a Blob store in Vercel → Storage."}</b>
+            Analytics: <b>{storage.analytics ? "Postgres ✓" : "Off. Add a Postgres database in Vercel → Storage."}</b>
           </li>
         </ul>
       </Card>

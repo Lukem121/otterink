@@ -7,10 +7,13 @@ import { cookies } from "next/headers";
 import { updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
+import { buildReport, clearAll, exportCsv } from "@/lib/analytics";
+import type { Report } from "@/lib/analytics-types";
 import { blobEnabled, blobPut, publicUrl } from "@/lib/blob";
+import { dbEnabled } from "@/lib/db";
 import { adminPassword, createSessionToken, SESSION_COOKIE, SESSION_DAYS } from "@/lib/session";
-import { readAnalytics, writeSite } from "@/lib/store";
-import { SiteSchema, type Analytics, type Site } from "@/lib/types";
+import { writeSite } from "@/lib/store";
+import { SiteSchema, type Site } from "@/lib/types";
 
 export type LoginState = { error?: string };
 
@@ -146,7 +149,36 @@ function decode(s: string) {
     .replace(/&gt;/g, ">");
 }
 
-export async function getAnalytics(days: number): Promise<Analytics> {
+const clampDays = (days: number) => Math.min(Math.max(Math.round(days) || 30, 1), 365);
+
+export async function getAnalyticsReport(days: number, tz: string): Promise<{ report: Report } | { error: string }> {
   await requireAdmin();
-  return readAnalytics(Math.min(Math.max(Math.round(days), 1), 365));
+  if (!dbEnabled) return { error: "No database connected." };
+  try {
+    return { report: await buildReport(clampDays(days), tz) };
+  } catch (e) {
+    console.error("[analytics] report failed:", e instanceof Error ? e.message : e);
+    return { error: "Couldn't load analytics from the database. Check that it's connected, then try again." };
+  }
+}
+
+export async function exportAnalyticsCsv(days: number, tz: string): Promise<{ csv: string } | { error: string }> {
+  await requireAdmin();
+  if (!dbEnabled) return { error: "No database connected." };
+  try {
+    return { csv: await exportCsv(clampDays(days), tz) };
+  } catch {
+    return { error: "Couldn't export. Try again." };
+  }
+}
+
+export async function resetAnalytics(): Promise<{ ok: boolean }> {
+  await requireAdmin();
+  if (!dbEnabled) return { ok: false };
+  try {
+    await clearAll();
+    return { ok: true };
+  } catch {
+    return { ok: false };
+  }
 }

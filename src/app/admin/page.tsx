@@ -4,7 +4,8 @@ import { Suspense } from "react";
 import { Editor } from "@/components/admin/editor";
 import { isAdmin } from "@/lib/auth";
 import { blobEnabled } from "@/lib/blob";
-import { analyticsEnabled, readSite, storageMode, storageWritable } from "@/lib/store";
+import { dbEnabled } from "@/lib/db";
+import { readSite, storageMode, storageWritable } from "@/lib/store";
 
 export const metadata: Metadata = { title: "Admin", robots: { index: false, follow: false } };
 
@@ -22,7 +23,7 @@ async function AdminLoader() {
   return (
     <Editor
       initial={site}
-      storage={{ mode: storageMode, writable: storageWritable, blob: blobEnabled, analytics: analyticsEnabled }}
+      storage={{ mode: storageMode, writable: storageWritable, blob: blobEnabled, analytics: dbEnabled }}
     />
   );
 }

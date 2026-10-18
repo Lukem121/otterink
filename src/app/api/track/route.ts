@@ -1,25 +1,49 @@
 import { after } from "next/server";
-import { recordClick, recordView } from "@/lib/store";
+import { recordEvent } from "@/lib/analytics";
+import { isAdmin } from "@/lib/auth";
+import { dbEnabled } from "@/lib/db";
+import { buildEvent, isBot, tooMany, TrackBody } from "@/lib/track";
 
-const BOT = /bot|crawl|spider|slurp|preview|facebookexternalhit|embedly|whatsapp|discord|telegram|vercel|headless/i;
+const done = () => new Response(null, { status: 204 });
 
 export async function POST(req: Request) {
-  if (BOT.test(req.headers.get("user-agent") ?? "")) return new Response(null, { status: 204 });
-  let body: { t?: string; id?: string; src?: string };
+  if (!dbEnabled) return done();
+
+  const ua = req.headers.get("user-agent") ?? "";
+  if (isBot(ua)) return done();
+
+  // Only accept events sent from this site's own pages.
+  const origin = req.headers.get("origin");
+  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
+  if (origin && host) {
+    try {
+      if (new URL(origin).host !== host) return done();
+    } catch {
+      return done();
+    }
+  }
+
+  let json: unknown;
   try {
-    body = JSON.parse(await req.text());
+    const text = await req.text();
+    if (text.length > 4000) return done();
+    json = JSON.parse(text);
   } catch {
     return new Response(null, { status: 400 });
   }
-  try {
-    if (body.t === "view") {
-      const src = String(body.src || "direct").toLowerCase().replace(/[^a-z0-9._-]/g, "").slice(0, 40) || "direct";
-      after(recordView(src).catch(() => {}));
-    } else if (body.t === "click" && typeof body.id === "string" && /^[\w-]{1,64}$/.test(body.id)) {
-      after(recordClick(body.id).catch(() => {}));
-    }
-  } catch {
-    // Analytics must never break the page.
-  }
-  return new Response(null, { status: 204 });
+  const parsed = TrackBody.safeParse(json);
+  if (!parsed.success) return new Response(null, { status: 400 });
+
+  // Don't count the owner's own visits while logged in to the admin.
+  if (await isAdmin()) return done();
+
+  const event = buildEvent(parsed.data, req.headers);
+  if (tooMany(event.visitor)) return done();
+
+  after(
+    recordEvent(event).catch((e) => {
+      console.error("[analytics] could not save event:", e instanceof Error ? e.message : e);
+    }),
+  );
+  return done();
 }

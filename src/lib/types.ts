@@ -145,11 +145,3 @@ export type Collection = z.infer<typeof CollectionSchema>;
 export type Theme = z.infer<typeof ThemeSchema>;
 export type FontKey = Theme["font"];
 export type Site = z.infer<typeof SiteSchema>;
-
-export type DayStat = { day: string; views: number; clicks: number };
-export type Analytics = {
-  days: DayStat[];
-  totals: { views: number; clicks: number };
-  items: { id: string; clicks: number }[];
-  sources: { source: string; views: number }[];
-};

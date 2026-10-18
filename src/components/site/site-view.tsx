@@ -2,12 +2,18 @@
 /* eslint-disable @next/next/no-img-element -- images come from Blob or any affiliate host */
 
 import { ArrowLeft, Check, Copy, MoreVertical, Search, Share2, ShoppingBag, Sparkles, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent } from "react";
+import type { EventType, ItemKind } from "@/lib/analytics-types";
 import { fontVar } from "@/lib/themes";
 import type { Collection, LinkItem, Product, Site } from "@/lib/types";
 import { SOCIALS } from "./social-icons";
 
 type Tab = "links" | "shop";
+
+type TrackEvent = { t: EventType; id?: string; k?: ItemKind; title?: string; url?: string; tab?: Tab; q?: string };
+type ClickInfo = { id: string; kind: ItemKind; title: string; url: string };
+
+const TrackCtx = createContext<(e: TrackEvent) => void>(() => {});
 
 type Props = {
   site: Site;
@@ -47,23 +53,35 @@ export function SiteView({ site, preview = false }: Props) {
     return () => window.removeEventListener("popstate", apply);
   }, [preview]);
 
-  // Page view analytics, once per browser session.
+  const track = useCallback(
+    (e: TrackEvent) => {
+      if (preview) return;
+      beacon({ ...e, ...visitContext() });
+    },
+    [preview],
+  );
+
+  // Page view, once per browser session.
   useEffect(() => {
     if (preview) return;
     try {
       if (sessionStorage.getItem("lp-viewed")) return;
       sessionStorage.setItem("lp-viewed", "1");
     } catch {}
-    const params = new URLSearchParams(window.location.search);
-    let src = params.get("utm_source") || "";
-    if (!src && document.referrer) {
-      try {
-        const host = new URL(document.referrer).hostname.replace(/^(www|m|l|lm|out)\./, "");
-        if (host !== window.location.hostname) src = host.split(".").slice(-2, -1)[0] || host;
-      } catch {}
-    }
-    beacon({ t: "view", src: src || "direct" });
-  }, [preview]);
+    track({ t: "view" });
+  }, [preview, track]);
+
+  // What people search for in the shop (after they stop typing).
+  const lastSearch = useRef("");
+  useEffect(() => {
+    const q = query.trim().toLowerCase();
+    if (preview || q.length < 2 || q === lastSearch.current) return;
+    const timer = setTimeout(() => {
+      lastSearch.current = q;
+      track({ t: "search", q });
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, [query, preview, track]);
 
   const navigate = useCallback(
     (t: Tab, collection: string | null = null) => {
@@ -80,15 +98,18 @@ export function SiteView({ site, preview = false }: Props) {
     setTimeout(() => setToast(null), 1800);
   }, []);
 
-  const onItemClick = (id: string) => (e: MouseEvent) => {
+  const onItemClick = (item: ClickInfo) => (e: MouseEvent) => {
     if (preview) {
       e.preventDefault();
       return;
     }
-    beacon({ t: "click", id });
+    track({ t: "click", id: item.id, k: item.kind, title: item.title, url: item.url, tab: activeTab });
   };
 
-  const sharePage = () => share(profile.name, window.location.href.split("#")[0], showToast);
+  const sharePage = () => {
+    track({ t: "share", id: "page", k: "page", title: profile.name });
+    share(profile.name, window.location.href.split("#")[0], showToast);
+  };
 
   const style = {
     "--lp-text": theme.text,
@@ -113,6 +134,7 @@ export function SiteView({ site, preview = false }: Props) {
   const collection = openCollection ? collections.find((c) => c.id === openCollection) : undefined;
 
   return (
+    <TrackCtx.Provider value={track}>
     <div
       className={`lp-root relative isolate ${preview ? "lp-preview min-h-full" : "min-h-dvh"} lp-btn-${theme.buttonStyle} ${theme.shadow ? "lp-shadow" : ""}`}
       style={style}
@@ -198,7 +220,10 @@ export function SiteView({ site, preview = false }: Props) {
                   role="tab"
                   type="button"
                   aria-selected={activeTab === t}
-                  onClick={() => navigate(t)}
+                  onClick={() => {
+                    if (t !== activeTab) track({ t: "tab", id: t, k: "tab", title: t === "links" ? shop.linksLabel : shop.shopLabel });
+                    navigate(t);
+                  }}
                   className="relative z-10 min-w-[104px] rounded-full px-6 py-2.5 text-[16px] font-semibold transition-colors"
                   style={{ color: activeTab === t ? "var(--lp-card-text)" : "rgb(255 255 255 / 0.92)" }}
                 >
@@ -228,7 +253,10 @@ export function SiteView({ site, preview = false }: Props) {
               collections={collections}
               query={query}
               setQuery={setQuery}
-              onOpenCollection={(id) => navigate("shop", id)}
+              onOpenCollection={(id) => {
+                track({ t: "collection", id, k: "collection", title: collections.find((c) => c.id === id)?.title });
+                navigate("shop", id);
+              }}
               onItemClick={onItemClick}
               onToast={showToast}
             />
@@ -250,10 +278,11 @@ export function SiteView({ site, preview = false }: Props) {
         </div>
       )}
     </div>
+    </TrackCtx.Provider>
   );
 }
 
-type ItemClick = (id: string) => (e: MouseEvent) => void;
+type ItemClick = (item: ClickInfo) => (e: MouseEvent) => void;
 
 function Avatar({ url, name, size = 108 }: { url: string; name: string; size?: number }) {
   const [failed, imgRef, onImgError] = useImageFailed(url);
@@ -305,7 +334,7 @@ function LinksList({ links, onItemClick, onToast }: { links: LinkItem[]; onItemC
               href={l.url}
               target="_blank"
               rel="noopener noreferrer"
-              onClick={onItemClick(l.id)}
+              onClick={onItemClick({ id: l.id, kind: "featured", title: l.title, url: l.url })}
               className={`lp-card lp-link block overflow-hidden ${l.highlight ? "lp-highlight" : ""}`}
             >
               <div className="aspect-[16/9] w-full overflow-hidden">
@@ -324,7 +353,7 @@ function LinksList({ links, onItemClick, onToast }: { links: LinkItem[]; onItemC
               href={l.url}
               target="_blank"
               rel="noopener noreferrer"
-              onClick={onItemClick(l.id)}
+              onClick={onItemClick({ id: l.id, kind: "link", title: l.title, url: l.url })}
               className="lp-card lp-link flex min-h-[64px] items-center gap-3 px-2.5 py-2.5"
             >
               <span className="size-11 shrink-0 overflow-hidden" style={{ borderRadius: "calc(var(--lp-radius) * 0.6)" }}>
@@ -337,7 +366,7 @@ function LinksList({ links, onItemClick, onToast }: { links: LinkItem[]; onItemC
               <span className="size-11 shrink-0" />
             </a>
             <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
-              <ItemMenu title={l.title} url={l.url} onToast={onToast} />
+              <ItemMenu id={l.id} kind="link" title={l.title} url={l.url} onToast={onToast} />
             </div>
           </div>
         );
@@ -428,7 +457,7 @@ function ProductGrid({
     <div className="grid grid-cols-2 gap-3.5">
       {products.map((p) => (
         <div key={p.id} className="lp-card relative flex flex-col overflow-hidden">
-          <a href={p.url} target="_blank" rel="noopener noreferrer sponsored" onClick={onItemClick(p.id)} className="block">
+          <a href={p.url} target="_blank" rel="noopener noreferrer sponsored" onClick={onItemClick({ id: p.id, kind: "product", title: p.title, url: p.url })} className="block">
             <div className="relative aspect-[4/5] w-full overflow-hidden bg-white">
               <ImageOrPlaceholder src={p.imageUrl} label={p.title} />
               {p.badge && (
@@ -450,7 +479,7 @@ function ProductGrid({
               href={p.url}
               target="_blank"
               rel="noopener noreferrer sponsored"
-              onClick={onItemClick(p.id)}
+              onClick={onItemClick({ id: p.id, kind: "product", title: p.title, url: p.url })}
               className="mx-3 mb-3 mt-auto block rounded-full py-2 text-center text-[14px] font-semibold transition hover:opacity-90"
               style={{ background: "var(--lp-card-text)", color: "var(--lp-card)" }}
             >
@@ -458,7 +487,7 @@ function ProductGrid({
             </a>
           )}
           <div className={`absolute right-1 ${buyLabel ? "bottom-[56px]" : "bottom-2"}`}>
-            <ItemMenu title={p.title} url={p.url} onToast={onToast} />
+            <ItemMenu id={p.id} kind="product" title={p.title} url={p.url} onToast={onToast} />
           </div>
         </div>
       ))}
@@ -525,7 +554,8 @@ function CollectionView({
   );
 }
 
-function ItemMenu({ title, url, onToast }: { title: string; url: string; onToast: (m: string) => void }) {
+function ItemMenu({ id, kind, title, url, onToast }: { id: string; kind: ItemKind; title: string; url: string; onToast: (m: string) => void }) {
+  const track = useContext(TrackCtx);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -554,6 +584,7 @@ function ItemMenu({ title, url, onToast }: { title: string; url: string; onToast
             className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-neutral-100"
             onClick={() => {
               setOpen(false);
+              track({ t: "share", id, k: kind, title, url });
               share(title, url, onToast);
             }}
           >
@@ -564,6 +595,7 @@ function ItemMenu({ title, url, onToast }: { title: string; url: string; onToast
             className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-neutral-100"
             onClick={() => {
               setOpen(false);
+              track({ t: "share", id, k: kind, title, url });
               copy(url, onToast);
             }}
           >
@@ -605,7 +637,7 @@ function SocialIcons({ socials, onItemClick, className }: { socials: Site["socia
             rel="noopener noreferrer"
             aria-label={label}
             title={label}
-            onClick={onItemClick(s.id)}
+            onClick={onItemClick({ id: s.id, kind: "social", title: label, url: s.url })}
             className="transition hover:-translate-y-0.5 hover:opacity-80"
           >
             <Icon className="size-[28px]" />
@@ -684,12 +716,28 @@ function ImageOrPlaceholder({ src, label, kind = "product" }: { src: string; lab
   );
 }
 
-function beacon(data: Record<string, string>) {
+function beacon(data: object) {
   const body = JSON.stringify(data);
   try {
     if (navigator.sendBeacon?.("/api/track", new Blob([body], { type: "application/json" }))) return;
   } catch {}
   fetch("/api/track", { method: "POST", body, keepalive: true }).catch(() => {});
+}
+
+/** Where the visit came from: utm tags in the link, and the page that linked here. */
+function visitContext() {
+  const ctx: { us?: string; um?: string; uc?: string; ref?: string } = {};
+  try {
+    const p = new URLSearchParams(window.location.search);
+    const us = p.get("utm_source");
+    const um = p.get("utm_medium");
+    const uc = p.get("utm_campaign");
+    if (us) ctx.us = us.slice(0, 60);
+    if (um) ctx.um = um.slice(0, 60);
+    if (uc) ctx.uc = uc.slice(0, 80);
+    if (document.referrer) ctx.ref = new URL(document.referrer).origin;
+  } catch {}
+  return ctx;
 }
 
 async function share(title: string, url: string, onToast: (m: string) => void) {
