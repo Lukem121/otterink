@@ -623,21 +623,30 @@ function useImageFailed(src: string) {
   return [!!src && failed === src, ref, markFailed] as const;
 }
 
+/** A bare address or domain typed into the admin still needs a scheme to open the right place. */
+function socialHref(platform: string, raw: string) {
+  const url = raw.trim();
+  if (/^[a-z][a-z0-9+.-]*:/i.test(url)) return url;
+  if (platform === "email" || /^[^\s/@]+@[^\s/@]+$/.test(url)) return `mailto:${url}`;
+  return `https://${url.replace(/^\/+/, "")}`;
+}
+
 function SocialIcons({ socials, onItemClick, className }: { socials: Site["socials"]; onItemClick: ItemClick; className: string }) {
   if (socials.length === 0) return null;
   return (
     <nav className={`flex flex-wrap gap-y-3 ${className}`} aria-label="Social links" style={{ color: "var(--lp-heading-color)" }}>
       {socials.map((s) => {
         const { icon: Icon, label } = SOCIALS[s.platform];
+        const href = socialHref(s.platform, s.url);
+        const mail = href.startsWith("mailto:");
         return (
           <a
             key={s.id}
-            href={s.url}
-            target="_blank"
-            rel="noopener noreferrer"
+            href={href}
+            {...(mail ? {} : { target: "_blank", rel: "noopener noreferrer" })}
             aria-label={label}
             title={label}
-            onClick={onItemClick({ id: s.id, kind: "social", title: label, url: s.url })}
+            onClick={onItemClick({ id: s.id, kind: "social", title: label, url: href })}
             className="transition hover:-translate-y-0.5 hover:opacity-80"
           >
             <Icon className="size-[28px]" />
