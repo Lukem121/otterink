@@ -92,7 +92,6 @@ export async function uploadImage(form: FormData): Promise<{ url: string } | { e
 }
 
 export type Preview = { title?: string; image?: string; price?: string };
-
 /** Best-effort read of a page's Open Graph tags. Amazon often blocks this. */
 export async function fetchPreview(url: string): Promise<Preview | { error: string }> {
   await requireAdmin();
@@ -113,7 +112,7 @@ export async function fetchPreview(url: string): Promise<Preview | { error: stri
       redirect: "follow",
       signal: AbortSignal.timeout(8000),
     });
-    const html = (await res.text()).slice(0, 600_000);
+    const html = (await res.text()).slice(0, 1_500_000);
     const meta = (prop: string) => {
       const re = new RegExp(
         `<meta[^>]+(?:property|name)=["']${prop}["'][^>]*content=["']([^"']*)["']|<meta[^>]+content=["']([^"']*)["'][^>]*(?:property|name)=["']${prop}["']`,
@@ -122,17 +121,62 @@ export async function fetchPreview(url: string): Promise<Preview | { error: stri
       const m = html.match(re);
       return decode(m?.[1] ?? m?.[2] ?? "");
     };
-    const title =
-      meta("og:title") || meta("twitter:title") || decode(html.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1] ?? "");
-    let image = meta("og:image") || meta("twitter:image");
-    if (!image) image = html.match(/id=["']landingImage["'][^>]*data-old-hires=["']([^"']+)["']/i)?.[1] ?? "";
-    const amount = meta("product:price:amount") || meta("og:price:amount");
-    const currency = meta("product:price:currency") || meta("og:price:currency");
-    const price = amount ? `${currency === "USD" || !currency ? "$" : currency + " "}${amount}` : "";
-    if (!title && !image) return { error: "That site didn't share any details. Fill them in by hand." };
+    const finalUrl = res.url || target.toString();
+    const isAmazon = /(^|\.)amazon\.[a-z.]+$/i.test(new URL(finalUrl).hostname);
+    // Amazon serves a "Robot Check" page to servers; its title and image mean nothing.
+    const blocked = /robot check|captcha|sorry! something went wrong/i.test(html.slice(0, 4000)) || res.status === 503;
+
+    let title = "";
+    let image = "";
+    let price = "";
+
+    if (!blocked) {
+      title =
+        decode(html.match(/id=["']productTitle["'][^>]*>\s*([^<]+?)\s*</i)?.[1] ?? "") ||
+        meta("og:title") ||
+        meta("twitter:title") ||
+        decode(html.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1] ?? "");
+      title = title
+        .replace(/^Amazon(\.[a-z.]+)?\s*:\s*/i, "")
+        .replace(/\s*[:|-]\s*Amazon(\.[a-z.]+)?\s*$/i, "")
+        .replace(/\s+:\s+[^:]{2,60}$/, "");
+
+      image = meta("og:image") || meta("twitter:image");
+      if (!image) {
+        image =
+          html.match(/"hiRes"\s*:\s*"(https:[^"]+)"/i)?.[1] ??
+          html.match(/id=["']landingImage["'][^>]*data-old-hires=["']([^"']+)["']/i)?.[1] ??
+          html.match(/id=["']landingImage["'][^>]*\ssrc=["']([^"']+)["']/i)?.[1] ??
+          html.match(/data-a-dynamic-image=["']\{&quot;(https:[^&]+)&quot;/i)?.[1] ??
+          "";
+      }
+
+      const amount = meta("product:price:amount") || meta("og:price:amount");
+      const currency = meta("product:price:currency") || meta("og:price:currency");
+      price = amount ? `${currency === "USD" || !currency ? "$" : currency + " "}${amount}` : "";
+      if (!price && isAmazon) {
+        price = decode(html.match(/class=["']a-offscreen["']>\s*([^<\s][^<]{0,20}?)\s*</i)?.[1] ?? "");
+      }
+    }
+
+    // Amazon's own image server works from just the product code, even when the page is blocked.
+    if (isAmazon && !image) {
+      const asin =
+        finalUrl.match(/\/(?:dp|gp\/product|gp\/aw\/d)\/([A-Z0-9]{10})/i)?.[1] ??
+        (!blocked ? html.match(/id=["']ASIN["'][^>]*value=["']([A-Z0-9]{10})["']/i)?.[1] : undefined);
+      if (asin) image = `https://m.media-amazon.com/images/P/${asin}.01._SL600_.jpg`;
+    }
+
+    if (!title && !image) {
+      return {
+        error: blocked
+          ? "Amazon blocked the lookup. Paste the image URL or upload one, and type the title."
+          : "That site didn't share any details. Fill them in by hand.",
+      };
+    }
     return {
-      title: title.trim().slice(0, 200),
-      image: image ? new URL(image, target).toString() : undefined,
+      title: title.trim().slice(0, 200) || undefined,
+      image: image ? new URL(image, finalUrl).toString() : undefined,
       price: price || undefined,
     };
   } catch {

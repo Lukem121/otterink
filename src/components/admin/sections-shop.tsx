@@ -144,7 +144,12 @@ function ProductRow({
       imageUrl: item.imageUrl || res.image || "",
       price: item.price || res.price || "",
     });
-    setMsg("Filled in what we found. Check the details.");
+    const missing = [!res.title && !item.title && "title", !res.image && !item.imageUrl && "image"].filter(Boolean);
+    setMsg(
+      missing.length
+        ? `Found what we could, but no ${missing.join(" or ")}. Add ${missing.length > 1 ? "them" : "it"} by hand.`
+        : "Filled in what we found. Check the details.",
+    );
   }
 
   return (
