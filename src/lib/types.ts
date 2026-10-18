@@ -77,12 +77,13 @@ export const ProductSchema = z.object({
   categoryId: text(64),
 });
 
-/** A heading on the Shop tab that groups products, e.g. Books or Pens. */
+/** A filter chip on the Shop tab, e.g. Books or Pens. */
 export const CategorySchema = z.object({
   id,
   title: text(80),
   enabled: z.boolean(),
-  startOpen: z.boolean(),
+  /** Icon key; empty picks one from the name. */
+  icon: text(40),
 });
 
 export const CollectionSchema = z.object({
@@ -139,8 +140,6 @@ export const SiteSchema = z.object({
     disclosure: text(400),
     /** Text of the button on product cards; empty hides it. */
     buyLabel: text(30),
-    /** Category headings open and close when tapped. */
-    foldCategories: z.boolean(),
   }),
   theme: ThemeSchema,
   seo: z.object({

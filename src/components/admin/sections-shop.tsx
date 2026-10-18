@@ -4,6 +4,7 @@ import { AlertTriangle, ChevronDown, FolderHeart, Loader2, Package, Plus, Rows3,
 import { useState } from "react";
 import { fetchPreview } from "@/app/admin/actions";
 import type { Category, Collection, Product, Site } from "@/lib/types";
+import { CATEGORY_ICON_KEYS, CATEGORY_ICONS, CategoryIcon, categoryIcon } from "@/components/site/category-icons";
 import type { SectionProps } from "./sections-profile";
 import { Button, Card, DeleteButton, EmptyState, Field, ImageInput, Select, SortableList, TextArea, TextInput, Thumb, Toggle, ToggleRow, rowCls, uid } from "./ui";
 
@@ -265,17 +266,16 @@ function CategoriesCard({ site, update }: SectionProps) {
   const [open, setOpen] = useState<string | null>(null);
   const setCategories = (categories: Site["categories"]) => update((s) => ({ ...s, categories }));
   const count = (id: string) => site.products.filter((p) => p.categoryId === id).length;
-  const fold = site.shop.foldCategories;
 
   return (
     <Card
       title="Categories"
-      description="Headings on the Shop tab, like Books or Pens. Drag to set their order, then pick a category in each product."
+      description="Buttons along the top of the Shop tab, like Books or Pens. Tapping one shows just those products. Drag to set the order, then pick a category in each product."
       actions={
         <Button
           variant="primary"
           onClick={() => {
-            const c: Category = { id: uid("k"), title: "", enabled: true, startOpen: true };
+            const c: Category = { id: uid("k"), title: "", enabled: true, icon: "" };
             setCategories([...site.categories, c]);
             setOpen(c.id);
           }}
@@ -299,11 +299,14 @@ function CategoriesCard({ site, update }: SectionProps) {
                 <div className={`${rowCls} ${item.enabled ? "" : "opacity-60"}`}>
                   <div className="flex items-center gap-2 p-2">
                     {handle}
+                    <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-zinc-100 text-zinc-700">
+                      <CategoryIcon name={categoryIcon(item.icon, item.title)} />
+                    </span>
                     <button type="button" onClick={() => setOpen(isOpen ? null : item.id)} className="min-w-0 flex-1 text-left">
                       <div className="truncate text-[14px] font-medium text-zinc-900">{item.title || <span className="text-zinc-400">Untitled category</span>}</div>
                       <div className="text-[12px] text-zinc-500">
                         {n} product{n === 1 ? "" : "s"}
-                        {n === 0 ? " · hidden until it has products" : fold && !item.startOpen ? " · starts closed" : ""}
+                        {n === 0 && " · hidden until it has products"}
                         {!item.enabled && n > 0 && " · its products are hidden too"}
                       </div>
                     </button>
@@ -317,14 +320,18 @@ function CategoriesCard({ site, update }: SectionProps) {
                       <Field label="Name">
                         <TextInput value={item.title} onChange={(title) => patch({ title })} placeholder="Books" maxLength={80} autoFocus />
                       </Field>
-                      {fold && (
-                        <ToggleRow
-                          label="Starts open"
-                          hint="Turn off to show just the heading until someone taps it."
-                          checked={item.startOpen}
-                          onChange={(startOpen) => patch({ startOpen })}
-                        />
-                      )}
+                      <Field label="Icon" hint="Auto picks one from the name.">
+                        <div className="flex flex-wrap gap-1.5">
+                          <IconChoice on={!item.icon} onClick={() => patch({ icon: "" })} label="Auto">
+                            <span className="text-[12px] font-semibold">Auto</span>
+                          </IconChoice>
+                          {CATEGORY_ICON_KEYS.map((k) => (
+                            <IconChoice key={k} on={item.icon === k} onClick={() => patch({ icon: k })} label={CATEGORY_ICONS[k].label}>
+                              <CategoryIcon name={k} />
+                            </IconChoice>
+                          ))}
+                        </div>
+                      </Field>
                       <div className="flex justify-end">
                         <DeleteButton
                           onConfirm={() =>
@@ -342,16 +349,25 @@ function CategoriesCard({ site, update }: SectionProps) {
               );
             }}
           />
-          <ToggleRow
-            label="Fold-up categories"
-            hint="Tap a heading to open or close it. Off shows plain headings with everything visible."
-            checked={fold}
-            onChange={(foldCategories) => update((s) => ({ ...s, shop: { ...s.shop, foldCategories } }))}
-          />
-          <p className="text-[12px] text-zinc-500">Products without a category show last, under “More”. Searching shows all matches in one list.</p>
+          <p className="text-[12px] text-zinc-500">“All” shows every product, including ones without a category. Hiding a category hides its products too.</p>
         </div>
       )}
     </Card>
+  );
+}
+
+function IconChoice({ on, onClick, label, children }: { on: boolean; onClick: () => void; label: string; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={label}
+      aria-label={label}
+      aria-pressed={on}
+      className={`grid h-10 min-w-10 place-items-center rounded-lg px-2 ring-1 transition ${on ? "bg-zinc-900 text-white ring-zinc-900" : "bg-white text-zinc-700 ring-zinc-200 hover:ring-zinc-400"}`}
+    >
+      {children}
+    </button>
   );
 }
 

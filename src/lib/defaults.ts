@@ -37,7 +37,6 @@ export function defaultSite(): Site {
       collectionsPosition: "bottom",
       disclosure: "",
       buyLabel: "",
-      foldCategories: true,
     },
     theme: presetTheme("mint"),
     seo: { title: "Otter.inkk", description: "Cozy coloring books and the art supplies I use." },
@@ -78,7 +77,7 @@ const BLANK_LINK: LinkItem = {
 };
 const BLANK_PRODUCT = product("", "", "");
 const BLANK_COLLECTION: Collection = { id: "", title: "", description: "", enabled: true };
-const BLANK_CATEGORY: Category = { id: "", title: "", enabled: true, startOpen: true };
+const BLANK_CATEGORY: Category = { id: "", title: "", enabled: true, icon: "" };
 
 const OLD_DISCLOSURE = "As an Amazon Associate I earn from qualifying purchases.";
 
