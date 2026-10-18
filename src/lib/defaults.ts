@@ -34,7 +34,7 @@ export function defaultSite(): Site {
       showSearch: true,
       searchPlaceholder: "Search my favourites",
       collectionsPosition: "bottom",
-      disclosure: "As an Amazon Associate I earn from qualifying purchases.",
+      disclosure: "",
       buyLabel: "",
     },
     theme: presetTheme("mint"),
@@ -77,6 +77,8 @@ const BLANK_PRODUCT = product("", "", "");
 const BLANK_COLLECTION: Collection = { id: "", title: "", description: "", enabled: true };
 
 /** Fill any fields missing from older saved data with defaults. */
+const OLD_DISCLOSURE = "As an Amazon Associate I earn from qualifying purchases.";
+
 export function normalizeSite(raw: unknown): Site {
   const d = defaultSite();
   const s = (raw ?? {}) as Partial<Site>;
@@ -84,7 +86,12 @@ export function normalizeSite(raw: unknown): Site {
     ...d,
     ...s,
     profile: { ...d.profile, ...s.profile },
-    shop: { ...d.shop, ...s.shop },
+    shop: {
+      ...d.shop,
+      ...s.shop,
+      // The starter disclosure was removed; blank it out where it was saved unedited.
+      disclosure: s.shop?.disclosure === OLD_DISCLOSURE ? "" : (s.shop?.disclosure ?? d.shop.disclosure),
+    },
     theme: { ...d.theme, ...s.theme },
     seo: { ...d.seo, ...s.seo },
     socials: s.socials ?? d.socials,
