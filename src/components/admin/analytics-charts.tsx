@@ -20,8 +20,11 @@ function niceStep(raw: number) {
   return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * pow;
 }
 
+/** Points are days ("2026-10-20") or, for a single day, hours ("2026-10-20T14"). */
 const dayLabel = (d: string, long = false) =>
-  new Date(`${d}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", ...(long ? { weekday: "short" } : {}), timeZone: "UTC" });
+  d.length > 10
+    ? `${d.slice(11)}:00`
+    : new Date(`${d}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", ...(long ? { weekday: "short" } : {}), timeZone: "UTC" });
 
 /** Page views as bars, clicks as a line, on one shared axis. */
 export function TrendChart({ data }: { data: DayPoint[] }) {
@@ -72,7 +75,7 @@ export function TrendChart({ data }: { data: DayPoint[] }) {
         viewBox={`0 0 ${W} ${H}`}
         className="block w-full touch-pan-y select-none"
         role="img"
-        aria-label="Daily page views and clicks"
+        aria-label="Page views and clicks over time"
         tabIndex={0}
         onFocus={() => setHover((v) => v ?? n - 1)}
         onBlur={() => setHover(null)}
@@ -94,7 +97,7 @@ export function TrendChart({ data }: { data: DayPoint[] }) {
         ))}
         <polyline points={line} fill="none" stroke={ORANGE} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
         {data.map((d, i) =>
-          i % labelEvery === 0 || i === n - 1 ? (
+          (i % labelEvery === 0 && n - 1 - i > labelEvery / 2) || i === n - 1 ? (
             <text key={d.day} x={x(i)} y={H - 8} textAnchor={i === 0 ? "start" : i === n - 1 ? "end" : "middle"} fontSize={11} fill={AXIS}>
               {dayLabel(d.day)}
             </text>

@@ -6,7 +6,7 @@ export type EventType = (typeof EVENT_TYPES)[number];
 export const ITEM_KINDS = ["link", "featured", "product", "social", "collection", "tab", "page"] as const;
 export type ItemKind = (typeof ITEM_KINDS)[number];
 
-export type RangeDays = 7 | 30 | 90 | 365;
+export type RangeDays = 1 | 7 | 30 | 90 | 365;
 
 export type Totals = { views: number; visitors: number; clicks: number; clickers: number };
 
@@ -45,7 +45,9 @@ export type Report = {
   tz: string;
   totals: Totals;
   prev: Totals;
+  /** Days, or hours of today when the range is one day (`bucket`). */
   daily: DayPoint[];
+  bucket: "day" | "hour";
   items: ItemRow[];
   sources: SourceRow[];
   referrers: CountRow[];

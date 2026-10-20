@@ -31,6 +31,7 @@ import { BLUE, Columns, Legend, ORANGE, Spark, TrendChart, compact, nf } from ".
 import { Button, Card, DeleteButton, EmptyState } from "./ui";
 
 const RANGES: { days: RangeDays; label: string }[] = [
+  { days: 1, label: "Today" },
   { days: 7, label: "7 days" },
   { days: 30, label: "30 days" },
   { days: 90, label: "90 days" },
@@ -150,13 +151,14 @@ function Dashboard({ report, names, site }: { report: Report; names: Map<string,
   const t = report.totals;
   const p = report.prev;
   const spark = (key: "views" | "visitors" | "clicks") => report.daily.map((d) => d[key]);
+  const today = report.bucket === "hour";
 
   return (
     <>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat icon={Users} label="Visitors" value={t.visitors} prev={p.visitors} spark={spark("visitors")} />
-        <Stat icon={Eye} label="Page views" value={t.views} prev={p.views} spark={spark("views")} />
-        <Stat icon={MousePointerClick} label="Clicks" value={t.clicks} prev={p.clicks} spark={spark("clicks")} />
+        <Stat icon={Users} label="Visitors" value={t.visitors} prev={p.visitors} spark={spark("visitors")} today={today} />
+        <Stat icon={Eye} label="Page views" value={t.views} prev={p.views} spark={spark("views")} today={today} />
+        <Stat icon={MousePointerClick} label="Clicks" value={t.clicks} prev={p.clicks} spark={spark("clicks")} today={today} />
         <Stat
           icon={Percent}
           label="Click rate"
@@ -203,7 +205,7 @@ function Dashboard({ report, names, site }: { report: Report; names: Map<string,
         </Card>
       </div>
 
-      <TimeCard report={report} />
+      {report.bucket === "day" && <TimeCard report={report} />}
 
       <div className="grid gap-5 lg:grid-cols-2">
         <BehaviourCard report={report} />
@@ -228,9 +230,9 @@ function Dashboard({ report, names, site }: { report: Report; names: Map<string,
 /* ---------- pieces ---------- */
 
 function Stat({
-  icon: Icon, label, value, prev, spark, sub,
+  icon: Icon, label, value, prev, spark, sub, today,
 }: {
-  icon: typeof Eye; label: string; value: number | string; prev?: number; spark?: number[]; sub?: string;
+  icon: typeof Eye; label: string; value: number | string; prev?: number; spark?: number[]; sub?: string; today?: boolean;
 }) {
   return (
     <div className="rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgb(0_0_0/0.04)] ring-1 ring-black/[0.06]">
@@ -244,7 +246,7 @@ function Stat({
         {spark && <Spark values={spark} />}
       </div>
       <div className="mt-2 min-h-4 text-[12px] text-zinc-500">
-        {typeof value === "number" && prev !== undefined ? <span title="Compared with the previous period of the same length"><Delta cur={value} prev={prev} label="vs prior" /></span> : sub}
+        {typeof value === "number" && prev !== undefined ? <span title={today ? "Compared with yesterday up to the same time" : "Compared with the same point in the previous period"}><Delta cur={value} prev={prev} label={today ? "vs yesterday" : "vs prior"} /></span> : sub}
       </div>
     </div>
   );
@@ -302,7 +304,7 @@ function TrendCard({ report }: { report: Report }) {
           <table className="w-full text-left text-[13px] tabular-nums">
             <thead className="sticky top-0 bg-zinc-50 text-[12px] text-zinc-500">
               <tr>
-                <th className="px-3 py-2 font-medium">Day</th>
+                <th className="px-3 py-2 font-medium">{report.bucket === "hour" ? "Hour" : "Day"}</th>
                 <th className="px-3 py-2 text-right font-medium">Visitors</th>
                 <th className="px-3 py-2 text-right font-medium">Page views</th>
                 <th className="px-3 py-2 text-right font-medium">Clicks</th>
@@ -311,7 +313,7 @@ function TrendCard({ report }: { report: Report }) {
             <tbody>
               {[...report.daily].reverse().map((d) => (
                 <tr key={d.day} className="border-t border-black/[0.05]">
-                  <td className="px-3 py-1.5">{d.day}</td>
+                  <td className="px-3 py-1.5">{report.bucket === "hour" ? `${d.day.slice(11)}:00` : d.day}</td>
                   <td className="px-3 py-1.5 text-right">{nf.format(d.visitors)}</td>
                   <td className="px-3 py-1.5 text-right">{nf.format(d.views)}</td>
                   <td className="px-3 py-1.5 text-right">{nf.format(d.clicks)}</td>

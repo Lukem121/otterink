@@ -25,7 +25,7 @@ export function safeTimeZone(tz: string | undefined) {
   return "UTC";
 }
 
-type Range = { from: Date; to: Date; prevFrom: Date };
+type Range = { from: Date; to: Date; prevFrom: Date; prevTo: Date };
 
 /** Day boundaries in the viewer's time zone, so "today" means their today. */
 async function range(days: number, tz: string): Promise<Range> {
@@ -35,7 +35,9 @@ async function range(days: number, tz: string): Promise<Range> {
             ((date_trunc('day', now() AT TIME ZONE $1) - (($2::int * 2) - 1) * interval '1 day') AT TIME ZONE $1) AS prev_from`,
     [tz, days],
   );
-  return { from: r.from_ts, to: r.to_ts, prevFrom: r.prev_from };
+  // The current period is still running, so compare against the same elapsed time of the previous one.
+  const prevTo = new Date(r.prev_from.getTime() + (r.to_ts.getTime() - r.from_ts.getTime()));
+  return { from: r.from_ts, to: r.to_ts, prevFrom: r.prev_from, prevTo };
 }
 
 const TOTALS_SQL = `
@@ -50,26 +52,27 @@ const toCounts = (rows: { label: string | null; n: number; extra?: number }[], f
 
 export async function buildReport(days: number, tzIn?: string): Promise<Report> {
   const tz = safeTimeZone(tzIn);
-  const { from, to, prevFrom } = await range(days, tz);
+  const { from, to, prevFrom, prevTo } = await range(days, tz);
   const win = [from, to];
+  const bucket = days === 1 ? "hour" : "day";
 
   const [
     totals, prev, daily, items, prevItems, sources, referrers, campaigns, countries, cities, devices, browsers, systems,
     hourly, weekday, searches, tabs, collections, shares, recent, all,
   ] = await Promise.all([
     query<Totals>(TOTALS_SQL, win),
-    query<Totals>(TOTALS_SQL, [prevFrom, from]),
+    query<Totals>(TOTALS_SQL, [prevFrom, prevTo]),
     query<{ day: string; views: number; visitors: number; clicks: number }>(
-      `SELECT to_char(d, 'YYYY-MM-DD') AS day,
+      `SELECT to_char(d, ${bucket === "hour" ? `'YYYY-MM-DD"T"HH24'` : "'YYYY-MM-DD'"}) AS day,
               COALESCE(v.views, 0) AS views, COALESCE(v.visitors, 0) AS visitors, COALESCE(v.clicks, 0) AS clicks
-       FROM generate_series(($1::timestamptz AT TIME ZONE $3)::date, ($2::timestamptz AT TIME ZONE $3)::date, interval '1 day') AS d
+       FROM generate_series(date_trunc('${bucket}', $1::timestamptz AT TIME ZONE $3), date_trunc('${bucket}', $2::timestamptz AT TIME ZONE $3), interval '1 ${bucket}') AS d
        LEFT JOIN (
-         SELECT (ts AT TIME ZONE $3)::date AS day,
+         SELECT date_trunc('${bucket}', ts AT TIME ZONE $3) AS day,
                 COUNT(*) FILTER (WHERE type = 'view')::int AS views,
                 COUNT(DISTINCT visitor)::int AS visitors,
                 COUNT(*) FILTER (WHERE type = 'click')::int AS clicks
          FROM events WHERE ts >= $1 AND ts < $2 GROUP BY 1
-       ) v ON v.day = d::date
+       ) v ON v.day = d
        ORDER BY d`,
       [from, to, tz],
     ),
@@ -86,7 +89,7 @@ export async function buildReport(days: number, tzIn?: string): Promise<Report> 
     query<{ id: string; clicks: number }>(
       `SELECT item_id AS id, COUNT(*)::int AS clicks FROM events
        WHERE type = 'click' AND item_id IS NOT NULL AND ts >= $1 AND ts < $2 GROUP BY item_id`,
-      [prevFrom, from],
+      [prevFrom, prevTo],
     ),
     query<{ source: string; visitors: number; views: number; clicks: number; clickers: number }>(
       `SELECT COALESCE(source, 'direct') AS source,
@@ -173,6 +176,7 @@ export async function buildReport(days: number, tzIn?: string): Promise<Report> 
 
   return {
     days,
+    bucket,
     from: from.toISOString(),
     to: to.toISOString(),
     tz,
